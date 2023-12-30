@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm", "cython >= 3.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "machine68k"
+authors = [
+    {name = "Christian Vogelgsang", email = "chris@vogelgsang.org"},
+]
+description = "A Cython binding for a m68k system emulator"
+requires-python = ">=3.7"
+keywords = ["m68k", "vamos"]
+license = {text = "GPL-v2"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Topic :: System :: Emulators",
+]
+dynamic = ["version", "readme"]
+
+[tool.setuptools]
+include-package-data = true
+#packages = ["machine68k"]
+
+[tool.setuptools.dynamic]
+readme = { file="README.md", content-type="text/markdown" }
+
+[tool.setuptools_scm]
