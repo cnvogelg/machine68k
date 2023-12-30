@@ -1,4 +1,5 @@
 include MANIFEST.in
+include CHANGELOG.md
 include README.md
 include Makefile
 include src/musashi/softfloat/softfloat-macros
