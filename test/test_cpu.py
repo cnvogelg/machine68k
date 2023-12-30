@@ -1,5 +1,5 @@
 import pytest
-from machine68k import CPU, Register, CPUType, cpu_type_from_str
+from machine68k import CPU, Register, CPUType, cpu_type_from_str, cpu_type_to_str
 
 
 def machine68k_cpu_type_test():
@@ -9,6 +9,9 @@ def machine68k_cpu_type_test():
     # invalid name
     with pytest.raises(ValueError):
         cpu_type_from_str("bla")
+    assert cpu_type_to_str(CPUType.M68000) == "68000"
+    assert cpu_type_to_str(CPUType.M68020) == "68020"
+    assert cpu_type_to_str("bla") is None
 
 
 def machine68k_cpu_rw_reg_test():

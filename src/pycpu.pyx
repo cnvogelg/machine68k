@@ -31,6 +31,18 @@ cpdef cpu_type_from_str(name):
       else:
         raise ValueError("Invalid CPUType: '%s'" % name)
 
+cpdef cpu_type_to_str(cpu_type):
+  if cpu_type == CPUType.M68000:
+    return "68000"
+  elif cpu_type == CPUType.M68020:
+    return "68020"
+  elif cpu_type == CPUType.M68030:
+    return "68030"
+  elif cpu_type == CPUType.M68040:
+    return "68040"
+  else:
+    return None
+
 # m68k.h
 cdef extern from "m68k.h":
   ctypedef enum m68k_register_t:
