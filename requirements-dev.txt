@@ -1,0 +1,7 @@
+cython
+sphinx
+twine
+tox
+black
+build
+pytest

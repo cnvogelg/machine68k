@@ -1,8 +1,10 @@
 PYTHON ?= python3
+PIP ?= pip3
 
 .PHONY: help setup remove test format sdist bdist upload clean clean-all
 
 help:
+	@echo "init      install dev packages"
 	@echo "setup     local pip install of package"
 	@echo "remove    uninstall pip install"
 	@echo "test      run pytest suite"
@@ -12,6 +14,9 @@ help:
 	@echo "upload    dist to pypi"
 	@echo "clean     clean"
 	@echo "clean-all remove all"
+
+init:
+	$(PIP) install --upgrade -r requirements-dev.txt
 
 setup:
 	pip install -e .
