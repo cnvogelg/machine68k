@@ -1,5 +1,14 @@
 import pytest
-from machine68k import CPU, Register, CPUType
+from machine68k import CPU, Register, CPUType, cpu_type_from_str
+
+
+def machine68k_cpu_type_test():
+    assert cpu_type_from_str("M68000") == CPUType.M68000
+    assert cpu_type_from_str("68000") == CPUType.M68000
+    assert cpu_type_from_str("00") == CPUType.M68000
+    # invalid name
+    with pytest.raises(ValueError):
+        cpu_type_from_str("bla")
 
 
 def machine68k_cpu_rw_reg_test():
@@ -17,6 +26,7 @@ def machine68k_cpu_rw_reg_test():
 
 def machine68k_cpu_rws_reg_test():
     cpu = CPU(CPUType.M68000)
+    assert cpu.cpu_type == CPUType.M68000
     cpu.ws_reg(Register.D0, -123)
     assert cpu.rs_reg(Register.D0) == -123
     # invalid values

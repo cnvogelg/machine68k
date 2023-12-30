@@ -2,6 +2,35 @@
 
 from libc.stdlib cimport malloc, free
 
+# cpu type constants
+cpdef enum CPUType:
+  INVALID = 0
+  M68000 = 1
+  M68010 = 2
+  M68EC020 = 3
+  M68020 = 4
+  M68EC030 = 5
+  M68030 = 6
+  M68EC040 = 7
+  M68LC040 = 8
+  M68040 = 9
+  SCC68070 = 10
+
+cpdef cpu_type_from_str(name):
+    try:
+      return CPUType[name]
+    except KeyError:
+      if name in ("68000", "000", "00"):
+        return CPUType.M68000
+      elif name in ("68020", "020", "20"):
+        return CPUType.M68020
+      elif name in ("68030", "030", "30"):
+        return CPUType.M68030
+      elif name in ("68040", "040", "40"):
+        return CPUType.M68040
+      else:
+        raise ValueError("Invalid CPUType: '%s'" % name)
+
 # m68k.h
 cdef extern from "m68k.h":
   ctypedef enum m68k_register_t:
@@ -89,10 +118,10 @@ cdef class CPUContext:
 
 # public CPU class
 cdef class CPU:
-  cdef unsigned int cpu_type
+  cdef readonly CPUType cpu_type
 
-  def __cinit__(self, cpu_type):
-    m68k_set_cpu_type(cpu_type)
+  def __cinit__(self, CPUType cpu_type):
+    m68k_set_cpu_type(<unsigned int>cpu_type)
     m68k_init()
     self.cpu_type = cpu_type
 
@@ -205,20 +234,6 @@ cdef class CPU:
 
   def set_cpu_context(self, CPUContext ctx):
     m68k_set_context(ctx.get_data())
-
-# cpu type constants
-cpdef enum CPUType:
-  INVALID = 0
-  M68000 = 1
-  M68010 = 2
-  M68EC020 = 3
-  M68020 = 4
-  M68EC030 = 5
-  M68030 = 6
-  M68EC040 = 7
-  M68LC040 = 8
-  M68040 = 9
-  SCC68070 = 10
 
 # register constants
 cpdef enum Register:

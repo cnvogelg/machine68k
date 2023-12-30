@@ -7,7 +7,7 @@ cdef class Machine:
   cdef readonly Memory mem
   cdef readonly Traps traps
 
-  def __cinit__(self, unsigned int cpu_type, unsigned ram_size_kb):
+  def __cinit__(self, CPUType cpu_type, unsigned ram_size_kb):
     self.cpu = CPU(cpu_type)
     self.mem = Memory(ram_size_kb)
     self.traps = Traps()
