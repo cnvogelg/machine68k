@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: help setup remove test format
+.PHONY: help setup remove test format sdist bdist upload clean clean-all
 
 help:
 	@echo "setup     local pip install of package"
@@ -10,6 +10,8 @@ help:
 	@echo "sdist     build source dist"
 	@echo "bdist     build binary dist"
 	@echo "upload    dist to pypi"
+	@echo "clean     clean"
+	@echo "clean-all remove all"
 
 setup:
 	pip install -e .
@@ -31,3 +33,9 @@ bdist:
 
 upload: sdist
 	twine upload dist/*
+
+clean:
+	$(PYTHON) setup.py clean
+
+clean-all:
+	rm -rf build/ dist/

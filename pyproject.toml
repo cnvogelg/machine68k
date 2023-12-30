@@ -9,7 +9,7 @@ authors = [
 ]
 description = "A Cython binding for a m68k system emulator"
 requires-python = ">=3.7"
-keywords = ["m68k", "vamos"]
+keywords = ["m68k", "musashi", "machine68k", "system emulator"]
 license = {text = "GPL-v2"}
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -21,7 +21,6 @@ dynamic = ["version", "readme"]
 
 [tool.setuptools]
 include-package-data = true
-#packages = ["machine68k"]
 
 [tool.setuptools.dynamic]
 readme = { file="README.md", content-type="text/markdown" }

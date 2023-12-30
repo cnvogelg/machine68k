@@ -1,4 +1,5 @@
 build/
+dist/
 gen/
 src/mach.c
 *.egg-info/
