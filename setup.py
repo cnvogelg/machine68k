@@ -3,14 +3,13 @@ import sys
 import subprocess
 
 from setuptools import setup, Extension
-from pkg_resources import parse_version
+from packaging import version
 from distutils.command.build_ext import build_ext
 from distutils.command.clean import clean
 from distutils.core import Command
 from distutils import ccompiler
 from distutils.dir_util import remove_tree
 from distutils import log
-from pkg_resources import parse_version
 
 # has cython?
 try:
@@ -33,7 +32,7 @@ if use_cython:
         from Cython import __version__ as cyver
 
         print("cython version:", cyver)
-        if parse_version(cyver) < parse_version("3.0"):
+        if version.parse(cyver) < version.parse("3.0"):
             print("cython is too old < 3.0! please update first!")
             sys.exit(1)
     except ImportError:

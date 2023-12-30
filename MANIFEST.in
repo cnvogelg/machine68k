@@ -1,0 +1,7 @@
+include MANIFEST.in
+include README.md
+include Makefile
+include src/musashi/softfloat/softfloat-macros
+include src/musashi/softfloat/softfloat-specialize
+include src/musashi/*.txt
+recursive-include src *.pyx *.c *.h
