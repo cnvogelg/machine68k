@@ -69,7 +69,7 @@ Note:
 
 ### Developers
 
-- Follow this route if you want to hack around with the amitools codebase
+- Follow this route if you want to hack around with the codebase
 - Clone the Git repo: [machine68k@git](https://github.com/cnvogelg/machine68k)
 - Ensure you have Cython installed:
 
