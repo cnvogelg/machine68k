@@ -108,8 +108,7 @@
 /* If ON, CPU will call the output reset callback when it encounters a reset
  * instruction.
  */
- /* CV Patch */
-#define M68K_EMULATE_RESET          OPT_ON
+#define M68K_EMULATE_RESET          OPT_OFF
 #define M68K_RESET_CALLBACK()       your_reset_handler_function()
 
 /* If ON, CPU will call the callback when it encounters a cmpi.l #v, dn
@@ -162,8 +161,7 @@
 /* If ON, CPU will call the instruction hook callback before every
  * instruction.
  */
- /* CV Patch */
-#define M68K_INSTRUCTION_HOOK       OPT_ON
+#define M68K_INSTRUCTION_HOOK       OPT_OFF
 #define M68K_INSTRUCTION_CALLBACK(pc) your_instruction_hook_function(pc)
 
 
@@ -177,14 +175,8 @@
  */
 #define M68K_EMULATE_ADDRESS_ERROR  OPT_OFF
 
-/* ---------- CV AddOns ---------- */
-
-/* Intercept illegal A-Line opcodes and call hook.
-   Hook prototype is: int hook()
-   If return == 0 then normal A-Line exception handling is performed.
-   Otherwise nothing is done.
- */
-#define M68K_ALINE_HOOK             OPT_ON
+/* Intercept A-Line opcodes and call an own hook. */
+#define M68K_ALINE_HOOK             OPT_OFF
 #define M68K_ALINE_CALLBACK()       your_aline_hook_function()
 
 /* Turn ON to enable logging of illegal instruction calls.

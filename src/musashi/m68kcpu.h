@@ -396,7 +396,6 @@ typedef uint32 uint64;
 #define CALLBACK_PC_CHANGED  m68ki_cpu.pc_changed_callback
 #define CALLBACK_SET_FC      m68ki_cpu.set_fc_callback
 #define CALLBACK_INSTR_HOOK  m68ki_cpu.instr_hook_callback
-/* CV */
 #define CALLBACK_ALINE_HOOK  m68ki_cpu.aline_hook_callback
 
 
@@ -686,8 +685,7 @@ extern jmp_buf m68ki_aerr_trap;
 	#define M68K_DO_LOG_EMU(A)
 #endif
 
-/* ---------- CV AddOn ---------- */
-
+/* Aline hook */
 #if M68K_ALINE_HOOK
        #if M68K_ALINE_HOOK == OPT_SPECIFY_HANDLER
                #define m68ki_aline_hook() M68K_ALINE_CALLBACK()
@@ -697,7 +695,6 @@ extern jmp_buf m68ki_aerr_trap;
 #else
        #define m68ki_aline_hook()  M68K_ALINE_EXCEPT
 #endif /* M68K_ALINE_HOOK */
-
 
 
 /* -------------------------- EA / Operand Access ------------------------- */
@@ -1014,7 +1011,7 @@ typedef struct
 	void (*pc_changed_callback)(unsigned int new_pc); /* Called when the PC changes by a large amount */
 	void (*set_fc_callback)(unsigned int new_fc);     /* Called when the CPU function code changes */
 	void (*instr_hook_callback)(unsigned int pc);     /* Called every instruction cycle prior to execution */
-	int  (*aline_hook_callback)(unsigned int opcode, unsigned int pc); /* CV: Called if invalid a-line opcode occurred */
+	int  (*aline_hook_callback)(unsigned int opcode, unsigned int pc); /* Called if invalid a-line opcode occurred */
 } m68ki_cpu_core;
 
 

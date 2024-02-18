@@ -599,12 +599,11 @@ static void default_instr_hook_callback(unsigned int pc)
 	(void)pc;
 }
 
-/* CV */
+/* Called every time an 0xaxxx opcode is encountered */
 static int default_aline_hook_callback(unsigned int opcode, unsigned int pc)
 {
   return M68K_ALINE_EXCEPT;
 }
-
 
 #if M68K_EMULATE_ADDRESS_ERROR
 	#include <setjmp.h>
@@ -782,7 +781,6 @@ void m68k_set_instr_hook_callback(void  (*callback)(unsigned int pc))
 	CALLBACK_INSTR_HOOK = callback ? callback : default_instr_hook_callback;
 }
 
-/* CV */
 void m68k_set_aline_hook_callback(int (*callback)(unsigned int, unsigned int))
 {
   CALLBACK_ALINE_HOOK = callback ? callback : default_aline_hook_callback;
@@ -1018,7 +1016,11 @@ int m68k_execute(int num_cycles)
 		SET_CYCLES(0);
 
 	/* return how many clocks we used */
-	return m68ki_initial_cycles - GET_CYCLES();
+	if (num_cycles == m68ki_initial_cycles)
+		return m68ki_initial_cycles - GET_CYCLES();
+
+	/* modified by end_timeslice. */
+	return num_cycles - m68ki_initial_cycles;
 }
 
 
@@ -1105,7 +1107,6 @@ void m68k_init(void)
 	m68k_set_pc_changed_callback(NULL);
 	m68k_set_fc_callback(NULL);
 	m68k_set_instr_hook_callback(NULL);
-	/* CV */
 	m68k_set_aline_hook_callback(NULL);
 }
 
