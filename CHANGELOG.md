@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.2.1] (2024-05-26)
+
+* Small change to fix modern pip3 packaging change breakage
+
 ## [0.2.0][1] (2024-02-18)
 
 * Updated musashi code base to 2158f7081001f89145283d291ee501321e8dc26d
