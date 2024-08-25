@@ -195,6 +195,12 @@ else:
 # use own musashi config file
 defines.append(("MUSASHI_CNF", '"my_conf.h"'))
 
+# use cython?
+if use_cython:
+    sourcefiles.append(cython_file)
+else:
+    sourcefiles.append(ext_file)
+
 extensions = [
     Extension(
         "machine68k",
@@ -207,10 +213,7 @@ extensions = [
 
 # use cython?
 if use_cython:
-    sourcefiles.append(cython_file)
     extensions = cythonize(extensions, language_level="3str")
-else:
-    sourcefiles.append(ext_file)
 
 setup(
     cmdclass=cmdclass,
