@@ -5,3 +5,4 @@ tox
 black
 build
 pytest
+pytest-benchmark

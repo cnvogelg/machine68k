@@ -1,7 +1,7 @@
 PYTHON ?= python3
 PIP ?= pip3
 
-.PHONY: help setup remove test format sdist bdist upload clean clean-all
+.PHONY: help setup remove build test format sdist bdist upload clean clean-all
 
 help:
 	@echo "init      install dev packages"
@@ -23,6 +23,9 @@ setup:
 
 remove:
 	pip uninstall machine68k
+
+build:
+	python setup.py build
 
 test:
 	pytest test
