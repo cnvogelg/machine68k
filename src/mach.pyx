@@ -1,3 +1,15 @@
+# string.h
+from libc.string cimport memcpy, memset, strlen, strcpy
+# stdlib.h
+from libc.stdlib cimport malloc, free
+
+import sys
+
+include "m68k.pyx"
+include "cpu.pyx"
+include "mem.pyx"
+include "traps.pyx"
+
 include "pycpu.pyx"
 include "pymem.pyx"
 include "pytraps.pyx"

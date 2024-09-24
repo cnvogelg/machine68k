@@ -1,82 +1,30 @@
-# mem.h
-cdef extern from "mem.h":
-  ctypedef unsigned int uint
-  ctypedef uint (*read_func_t)(uint addr, void *ctx)
-  ctypedef void (*write_func_t)(uint addr, uint value, void *ctx)
-  ctypedef void (*invalid_func_t)(int mode, int width, uint addr, void *ctx)
-  ctypedef void (*trace_func_t)(int mode, int width, uint addr, uint val, void *ctx)
-
-  int mem_init(uint ram_size_kib)
-  void mem_free()
-
-  void mem_set_invalid_func(invalid_func_t func, void *ctx)
-  void mem_set_trace_mode(int on)
-  void mem_set_trace_func(trace_func_t func, void *ctx)
-
-  uint mem_reserve_special_range(uint num_pages)
-  void mem_set_special_range_read_func(uint page_addr, uint width, read_func_t func, void *ctx)
-  void mem_set_special_range_write_func(uint page_addr, uint width, write_func_t func, void *ctx)
-
-  unsigned int m68k_read_memory_8(unsigned int address)
-  unsigned int m68k_read_memory_16(unsigned int address)
-  unsigned int m68k_read_memory_32(unsigned int address)
-
-  void m68k_write_memory_8(unsigned int address, unsigned int value)
-  void m68k_write_memory_16(unsigned int address, unsigned int value)
-  void m68k_write_memory_32(unsigned int address, unsigned int value)
-
-  unsigned char *mem_raw_ptr()
-  uint mem_raw_size()
-
-  int mem_ram_r8(uint addr, uint *val)
-  int mem_ram_r16(uint addr, uint *val)
-  int mem_ram_r32(uint addr, uint *val)
-
-  int mem_ram_w8(uint addr, uint val)
-  int mem_ram_w16(uint addr, uint val)
-  int mem_ram_w32(uint addr, uint val)
-
-# string.h
-from libc.string cimport memcpy, memset, strlen, strcpy
-from libc.stdlib cimport malloc, free
-import sys
-
-# wrapper functions
-cdef object mem_callback_exc
-cdef check_mem_exc():
-  # raise a mem exception
-  global mem_callback_exc
-  if mem_callback_exc:
-    exc = mem_callback_exc
-    mem_callback_exc = None
-    raise exc[0], exc[1], exc[2]
-
+# func wrapper
 cdef void trace_func_wrapper(int mode, int width, uint addr, uint val, void *ctx) noexcept:
   cdef object py_func = <object>ctx
   try:
     py_func(chr(mode), width, addr, val)
   except:
-    global mem_callback_exc
-    mem_callback_exc = sys.exc_info()
-    m68k_end_timeslice()
+    global run_exc
+    run_exc = sys.exc_info()
+    cpu_end(CPU_END_MEM_TRACE_FUNC_ERROR)
 
 cdef void invalid_func_wrapper(int mode, int width, uint addr, void *ctx) noexcept:
   cdef object py_func = <object>ctx
   try:
     py_func(chr(mode), width, addr)
   except:
-    global mem_callback_exc
-    mem_callback_exc = sys.exc_info()
-    m68k_end_timeslice()
+    global run_exc
+    run_exc = sys.exc_info()
+    cpu_end(CPU_END_MEM_INVALID_FUNC_ERROR)
 
 cdef uint special_read_func_wrapper(uint addr, void *ctx) noexcept:
   cdef object py_func = <object>ctx
   try:
     return py_func(addr)
   except:
-    global mem_callback_exc
-    mem_callback_exc = sys.exc_info()
-    m68k_end_timeslice()
+    global run_exc
+    run_exc = sys.exc_info()
+    cpu_end(CPU_END_MEM_READ_FUNC_ERROR)
     return 0
 
 cdef void special_write_func_wrapper(uint addr, uint value, void *ctx) noexcept:
@@ -84,9 +32,9 @@ cdef void special_write_func_wrapper(uint addr, uint value, void *ctx) noexcept:
   try:
     py_func(addr, value)
   except:
-    global mem_callback_exc
-    mem_callback_exc = sys.exc_info()
-    m68k_end_timeslice()
+    global run_exc
+    run_exc = sys.exc_info()
+    cpu_end(CPU_END_MEM_READ_FUNC_ERROR)
 
 class MemoryError(Exception):
   def __init__(self, addr, op, size=None):
@@ -187,65 +135,65 @@ cdef class Memory:
   # CPU-like memory access (not RAM only!)
   cpdef cpu_r8(self, uint addr):
     cdef uint val = m68k_read_memory_8(addr)
-    check_mem_exc()
+    raise_run_exc()
     return val
   cpdef cpu_r16(self, uint addr):
     cdef uint val = m68k_read_memory_16(addr)
-    check_mem_exc()
+    raise_run_exc()
     return val
   cpdef cpu_r32(self, uint addr):
     cdef uint val = m68k_read_memory_32(addr)
-    check_mem_exc()
+    raise_run_exc()
     return val
   cpdef cpu_w8(self, uint addr, uint value):
     if value > 0xff:
       raise OverflowError("value does not fit into byte")
     m68k_write_memory_8(addr, value)
-    check_mem_exc()
+    raise_run_exc()
   cpdef cpu_w16(self, uint addr, uint value):
     if value > 0xffff:
       raise OverflowError("value does not fit into word")
     m68k_write_memory_16(addr, value)
-    check_mem_exc()
+    raise_run_exc()
   cpdef cpu_w32(self, uint addr, uint value):
     m68k_write_memory_32(addr, value)
-    check_mem_exc()
+    raise_run_exc()
 
   # CPU-like signed memory access (not RAM only!)
   cpdef cpu_r8s(self, uint addr):
     cdef uint val = m68k_read_memory_8(addr)
-    check_mem_exc()
+    raise_run_exc()
     # sign extend
     if val & 0x80 == 0x80:
       val |= 0xffffff00
     return <int>(val)
   cpdef cpu_r16s(self, uint addr):
     cdef uint val = m68k_read_memory_16(addr)
-    check_mem_exc()
+    raise_run_exc()
     # sign extend
     if val & 0x8000 == 0x8000:
       val |= 0xffff0000
     return <int>(val)
   cpdef cpu_r32s(self, uint addr):
     cdef uint val = m68k_read_memory_32(addr)
-    check_mem_exc()
+    raise_run_exc()
     return <int>(val)
   cpdef cpu_w8s(self, uint addr, int value):
     if value < -0x80 or value > 0x7f:
       raise OverflowError("value does not fit into byte")
     cdef uint val = <uint>value & 0xff
     m68k_write_memory_8(addr, val)
-    check_mem_exc()
+    raise_run_exc()
   cpdef cpu_w16s(self, uint addr, int value):
     if value < -0x8000 or value > 0x7fff:
       raise OverflowError("value does not fit into word")
     cdef uint val = <uint>value & 0xffff
     m68k_write_memory_16(addr, val)
-    check_mem_exc()
+    raise_run_exc()
   cpdef cpu_w32s(self, uint addr, int value):
     cdef uint val = <uint>(value)
     m68k_write_memory_32(addr, val)
-    check_mem_exc()
+    raise_run_exc()
 
   # memory access (RAM only!)
   cpdef r8(self, uint addr):

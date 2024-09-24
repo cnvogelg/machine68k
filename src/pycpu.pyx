@@ -1,7 +1,3 @@
-# cython binding for musashi
-
-from libc.stdlib cimport malloc, free
-
 # cpu type constants
 cpdef enum CPUType:
   INVALID = 0
@@ -16,20 +12,57 @@ cpdef enum CPUType:
   M68040 = 9
   SCC68070 = 10
 
+# register constants
+cpdef enum Register:
+  D0 = 0
+  D1 = 1
+  D2 = 2
+  D3 = 3
+  D4 = 4
+  D5 = 5
+  D6 = 6
+  D7 = 7
+
+  A0 = 8
+  A1 = 9
+  A2 = 10
+  A3 = 11
+  A4 = 12
+  A5 = 13
+  A6 = 14
+  A7 = 15
+
+  PC = 16
+  SR = 17
+  SP = 18
+  USP = 19
+  ISP = 20
+  MSP = 21
+  SFC = 22
+  DFC = 23
+  VBR = 24
+  CACR = 25
+  CAAR = 26
+  PREF_ADDR = 27
+  PREF_DATA = 28
+  PPC = 29
+  IR = 30
+  CPU_TYPE = 31
+
 cpdef cpu_type_from_str(name):
-    try:
-      return CPUType[name]
-    except KeyError:
-      if name in ("68000", "000", "00"):
-        return CPUType.M68000
-      elif name in ("68020", "020", "20"):
-        return CPUType.M68020
-      elif name in ("68030", "030", "30"):
-        return CPUType.M68030
-      elif name in ("68040", "040", "40"):
-        return CPUType.M68040
-      else:
-        raise ValueError("Invalid CPUType: '%s'" % name)
+  try:
+    return CPUType[name]
+  except KeyError:
+    if name in ("68000", "000", "00"):
+      return CPUType.M68000
+    elif name in ("68020", "020", "20"):
+      return CPUType.M68020
+    elif name in ("68030", "030", "30"):
+      return CPUType.M68030
+    elif name in ("68040", "040", "40"):
+      return CPUType.M68040
+    else:
+      raise ValueError("Invalid CPUType: '%s'" % name)
 
 cpdef cpu_type_to_str(cpu_type):
   if cpu_type == CPUType.M68000:
@@ -43,55 +76,47 @@ cpdef cpu_type_to_str(cpu_type):
   else:
     return None
 
-# m68k.h
-cdef extern from "m68k.h":
-  ctypedef enum m68k_register_t:
-    M68K_REG_D0, M68K_REG_D1, M68K_REG_D2, M68K_REG_D3,
-    M68K_REG_D4, M68K_REG_D5, M68K_REG_D6, M68K_REG_D7,
-    M68K_REG_A0, M68K_REG_A1, M68K_REG_A2, M68K_REG_A3,
-    M68K_REG_A4, M68K_REG_A5, M68K_REG_A6, M68K_REG_A7,
-    M68K_REG_PC, M68K_REG_SR,
-    M68K_REG_SP, M68K_REG_USP, M68K_REG_ISP, M68K_REG_MSP,
-    M68K_REG_SFC, M68K_REG_DFC,
-    M68K_REG_VBR,
-    M68K_REG_CACR, M68K_REG_CAAR,
-    M68K_REG_PREF_ADDR, M68K_REG_PREF_DATA,
-    M68K_REG_PPC, M68K_REG_IR,
-    M68K_REG_CPU_TYPE
+# exception during execution
+cdef object run_exc
 
-  void m68k_set_cpu_type(unsigned int cpu_type)
-  void m68k_init()
-  void m68k_pulse_reset()
-  int m68k_execute(int num_cycles)
-  void m68k_end_timeslice()
+cdef clear_run_exc():
+  global run_exc
+  run_exc = None
 
-  unsigned int m68k_get_reg(void* context, m68k_register_t reg)
-  void m68k_set_reg(m68k_register_t reg, unsigned int value)
+cdef raise_run_exc():
+  global run_exc
+  if run_exc is not None:
+    exc = run_exc
+    run_exc = None
+    raise exc[0], exc[1], exc[2]
 
-  void m68k_set_pc_changed_callback(void (*callback)(unsigned int new_pc))
-  void m68k_set_reset_instr_callback(void (*callback)())
-  void m68k_set_illg_instr_callback(int (*callback)(int opcode))
-  void m68k_set_instr_hook_callback(void (*callback)(unsigned int pc))
-
-  unsigned int m68k_disassemble(char* str_buff, unsigned int pc, unsigned int cpu_type)
-  unsigned int m68k_disassemble_raw(char* str_buff, unsigned int pc, const unsigned char* opdata, const unsigned char* argdata, unsigned int cpu_type)
-
-  unsigned int m68k_context_size()
-  unsigned int m68k_get_context(void* dst)
-  void m68k_set_context(void* dst)
-
-# wrapper
+# func wrapper
 cdef object pc_changed_func
 cdef void pc_changed_func_wrapper(unsigned int new_pc) noexcept:
-  pc_changed_func(new_pc)
+  try:
+    pc_changed_func(new_pc)
+  except:
+    global run_exc
+    run_exc = sys.exc_info()
+    cpu_end(CPU_END_PC_CHANGED_FUNC_ERROR)
 
 cdef object reset_instr_func
 cdef void reset_instr_func_wrapper() noexcept:
-  reset_instr_func()
+  try:
+    reset_instr_func()
+  except:
+    global run_exc
+    run_exc = sys.exc_info()
+    cpu_end(CPU_END_RESET_INSTR_FUNC_ERROR)
 
 cdef object instr_hook_func
 cdef void instr_hook_func_wrapper(unsigned int pc) noexcept:
-  instr_hook_func()
+  try:
+    instr_hook_func(pc)
+  except:
+    global run_exc
+    run_exc = sys.exc_info()
+    cpu_end(CPU_END_INSTR_HOOK_FUNC_ERROR)
 
 # public CPUContext
 cdef class CPUContext:
@@ -166,6 +191,12 @@ cdef class CPU:
   def r_pc(self):
     return self.r_reg_internal(M68K_REG_PC)
 
+  def w_sp(self, val):
+    self.w_reg_internal(M68K_REG_A7,val)
+
+  def r_sp(self):
+    return self.r_reg_internal(M68K_REG_A7)
+
   def w_sr(self, val):
     self.w_reg_internal(M68K_REG_SR,val)
 
@@ -194,12 +225,22 @@ cdef class CPU:
     m68k_pulse_reset()
 
   def execute(self, num_cycles):
-    cdef int cycles = m68k_execute(num_cycles)
-    check_mem_exc()
-    return cycles
+    clear_run_exc()
+    cdef int total_cycles
+    cdef int flags = cpu_execute(num_cycles, &total_cycles)
+
+    # recursion?
+    if flags == CPU_END_RECURSE_EXECUTE:
+      raise RuntimeError("execute() called recursively")
+    # if execution was ended by an error then we assume run_exc was set
+    # and we will raise now the error in this function
+    elif (flags & CPU_END_ERROR_MASK) != 0:
+      raise_run_exc()
+
+    return total_cycles
 
   def end(self):
-    m68k_end_timeslice()
+    cpu_end(CPU_END_USER)
 
   def set_pc_changed_callback(self, py_func):
     global pc_changed_func
@@ -246,40 +287,3 @@ cdef class CPU:
 
   def set_cpu_context(self, CPUContext ctx):
     m68k_set_context(ctx.get_data())
-
-# register constants
-cpdef enum Register:
-  D0 = 0
-  D1 = 1
-  D2 = 2
-  D3 = 3
-  D4 = 4
-  D5 = 5
-  D6 = 6
-  D7 = 7
-
-  A0 = 8
-  A1 = 9
-  A2 = 10
-  A3 = 11
-  A4 = 12
-  A5 = 13
-  A6 = 14
-  A7 = 15
-
-  PC = 16
-  SR = 17
-  SP = 18
-  USP = 19
-  ISP = 20
-  MSP = 21
-  SFC = 22
-  DFC = 23
-  VBR = 24
-  CACR = 25
-  CAAR = 26
-  PREF_ADDR = 27
-  PREF_DATA = 28
-  PPC = 29
-  IR = 30
-  CPU_TYPE = 31

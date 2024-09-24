@@ -2,6 +2,7 @@ PYTHON ?= python3
 PIP ?= pip3
 
 .PHONY: help setup remove build test format sdist bdist upload clean clean-all
+.PHONY: html clean-html
 
 help:
 	@echo "init      install dev packages"
@@ -12,8 +13,10 @@ help:
 	@echo "sdist     build source dist"
 	@echo "bdist     build binary dist"
 	@echo "upload    dist to pypi"
+	@echo "html      generate cython html output"
 	@echo "clean     clean"
 	@echo "clean-all remove all"
+	@echo "clean-html clean html files"
 
 init:
 	$(PIP) install --upgrade -r requirements-dev.txt
@@ -42,8 +45,14 @@ bdist:
 upload: sdist
 	twine upload dist/*
 
+html:
+	cython src/mach.pyx -a
+
 clean:
 	$(PYTHON) setup.py clean
 
 clean-all:
 	rm -rf build/ dist/
+
+clean-html:
+	rm -f src/*.html

@@ -162,6 +162,7 @@ command_options = {}
 
 cython_file = "src/mach.pyx"
 sourcefiles = [
+    "src/cpu.c",
     "src/traps.c",
     "src/mem.c",
     "src/musashi/m68kcpu.c",
@@ -176,8 +177,13 @@ depends = [
     "src/pytraps.pyx",
     "src/musashi/m68k.h",
     "src/musashi/m68kcpu.h",
+    "src/cpu.h",
+    "src/cpu.pyx",
     "src/mem.h",
+    "src/mem.pyx",
     "src/traps.h",
+    "src/traps.pyx",
+    "src/m68k.pyx",
     "src/musashi/softfloat/mamesf.h",
     "src/musashi/softfloat/milieu.h",
     "src/musashi/softfloat/softfloat.h",

@@ -1,27 +1,13 @@
-# traps.h
-cdef extern from "traps.h":
-  int TRAP_DEFAULT
-  int TRAP_AUTO_RTS
-  int TRAP_ONE_SHOT
-  ctypedef void (*trap_func_t)(uint opcode, uint pc, void *data)
-  void trap_init()
-  int  trap_setup(trap_func_t func, int flags, void *data)
-  void trap_free(int id)
-  int trap_aline(uint opcode, uint pc)
-
-cdef object trap_exc_func
-
-from cpython.exc cimport PyErr_Print
-
-cdef void trap_wrapper(uint opcode, uint pc, void *data) noexcept:
+cdef int trap_wrapper(uint opcode, uint pc, void *data) noexcept:
+  global trap_exc
   cdef object py_func = <object>data
   try:
     py_func(opcode, pc)
+    return TRAP_RESULT_OK
   except:
-    if trap_exc_func is not None:
-      trap_exc_func(opcode, pc)
-    else:
-      raise
+    global run_exc
+    run_exc = sys.exc_info()
+    return TRAP_RESULT_ERROR
 
 cdef class Traps:
   cdef dict func_map
@@ -30,20 +16,15 @@ cdef class Traps:
     trap_init()
     self.func_map = {}
 
-  def cleanup(self):
-    self.set_exc_func(None)
-
-  def set_exc_func(self, func):
-    global trap_exc_func
-    trap_exc_func = func
-
-  def setup(self, py_func, auto_rts=False, one_shot=False):
+  def setup(self, py_func, auto_rts=False, one_shot=False, defer=False):
     cdef int flags
-    flags = TRAP_DEFAULT
+    flags = TRAP_FLAG_DEFAULT
     if auto_rts:
-      flags |= TRAP_AUTO_RTS
+      flags |= TRAP_FLAG_AUTO_RTS
     if one_shot:
-      flags |= TRAP_ONE_SHOT
+      flags |= TRAP_FLAG_ONE_SHOT
+    if defer:
+      flags |= TRAP_FLAG_DEFER
     tid = trap_setup(trap_wrapper, flags, <void *>py_func)
     if tid != -1:
       # keep function reference around
@@ -55,21 +36,17 @@ cdef class Traps:
     del self.func_map[tid]
 
   def trigger(self, uint opcode, uint pc):
-    return trap_aline(opcode, pc)
+    clear_run_exc()
+    cdef int result = trap_aline(opcode, pc)
+    raise_run_exc()
+    return result
+
+  def defer_call(self):
+    clear_run_exc()
+    cdef int result = trap_defer_call()
+    if result != TRAP_RESULT_OK:
+      raise_run_exc()
 
   def get_func(self, tid):
     if tid in self.func_map:
       return self.func_map[tid]
-
-# constants
-# aline callback
-cpdef enum ALineMode:
-  NONE = 0
-  EXCEPT = 1
-  RTS = 2
-
-# traps
-cpdef enum TrapType:
-  DEFAULT = 0
-  ONE_SHOT = 1
-  AUTO_RTS = 2
