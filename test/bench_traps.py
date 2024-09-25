@@ -83,3 +83,30 @@ def machine68k_machine_defer_traps_benchmark(benchmark):
 
     benchmark(run)
     m.cleanup()
+
+
+def machine68k_machine_defer_traps_oldpc_benchmark(benchmark):
+    m, mem, cpu, traps, code, opc_end = setup_machine()
+
+    total = 10000
+    count = 0
+
+    def dummy(opc, pc):
+        nonlocal count
+        count += 1
+
+    tid = traps.setup(dummy, defer=True, old_pc=True)
+    opc = 0xA000 | tid
+
+    write_traps(mem, code, opc, total, opc_end)
+
+    def run():
+        nonlocal count
+        count = 0
+        cpu.pulse_reset()
+        cycles = cpu.execute(100_000)
+        assert count == total
+        assert cycles == (total + 1) * 4
+
+    benchmark(run)
+    m.cleanup()

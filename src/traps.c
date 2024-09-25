@@ -89,15 +89,22 @@ int trap_defer_call(void)
   entry_t *entry = call->entry;
 
   if(entry != NULL) {
-    /* set pc to trap value */
-    uint cur_pc = m68k_get_reg(NULL, M68K_REG_PC);
-    m68k_set_reg(M68K_REG_PC, call->pc);
+    int result;
 
-    /* perform call */
-    int result = entry->trap(call->opcode, call->pc, entry->data);
+    if(entry->flags & TRAP_FLAG_DEFER_OLD_PC) {
+        /* set pc to trap value */
+        uint cur_pc = m68k_get_reg(NULL, M68K_REG_PC);
+        m68k_set_reg(M68K_REG_PC, call->pc);
 
-    /* restore pc */
-    m68k_set_reg(M68K_REG_PC, cur_pc);
+        /* perform call */
+        result = entry->trap(call->opcode, call->pc, entry->data);
+
+        /* restore pc */
+        m68k_set_reg(M68K_REG_PC, cur_pc);
+    } else {
+        /* perform call */
+        result = entry->trap(call->opcode, call->pc, entry->data);
+    }
 
     /* clear defer call */
     call->entry = NULL;

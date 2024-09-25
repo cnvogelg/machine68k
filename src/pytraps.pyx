@@ -19,7 +19,7 @@ cdef class Traps:
   def cleanup(self):
     pass
 
-  def setup(self, py_func, auto_rts=False, one_shot=False, defer=False):
+  def setup(self, py_func, auto_rts=False, one_shot=False, defer=False, old_pc=False):
     cdef int flags
     flags = TRAP_FLAG_DEFAULT
     if auto_rts:
@@ -28,6 +28,8 @@ cdef class Traps:
       flags |= TRAP_FLAG_ONE_SHOT
     if defer:
       flags |= TRAP_FLAG_DEFER
+      if old_pc:
+        flags |= TRAP_FLAG_DEFER_OLD_PC
     tid = trap_setup(trap_wrapper, flags, <void *>py_func)
     if tid != -1:
       # keep function reference around

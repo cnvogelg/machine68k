@@ -4,6 +4,7 @@ cdef extern from "traps.h":
   int TRAP_FLAG_AUTO_RTS
   int TRAP_FLAG_ONE_SHOT
   int TRAP_FLAG_DEFER
+  int TRAP_FLAG_DEFER_OLD_PC
 
   int TRAP_RESULT_OK
   int TRAP_RESULT_ERROR

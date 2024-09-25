@@ -180,6 +180,25 @@ def machine68k_machine_trap_defer_test():
     assert a == [opc, code]
 
 
+def machine68k_machine_trap_defer_oldpc_test():
+    m, mem, cpu, traps, code, opc_end = setup_machine()
+    a = []
+
+    def my_func(opcode, pc):
+        a.append(opcode)
+        a.append(pc)
+        assert cpu.r_pc() == pc
+
+    tid = traps.setup(my_func, defer=True, old_pc=True)
+    opc = 0xA000 | tid
+    mem.w16(code, opc)
+    mem.w16(code + 2, opc_end)
+    cycles = cpu.execute(2000)
+    m.cleanup()
+    assert cycles == 8
+    assert a == [opc, code]
+
+
 def machine68k_machine_trap_defer_raise_test():
     m, mem, cpu, traps, code, opc_end = setup_machine()
 
