@@ -2,111 +2,121 @@ from machine68k import CPUType, Machine
 from opcodes import op_reset
 
 
-def setup_machine():
-    m = Machine(CPUType.M68000, 1025)
-    mem = m.mem
-    cpu = m.cpu
-    traps = m.traps
-    mem.w32(0, 0x800)  # init sp
-    mem.w32(4, 0x400)  # init pc
-    # set supervisor stacks
-    cpu.w_isp(0x700)
-    cpu.w_msp(0x780)
-    # trigger reset (read sp and init pc)
-    cpu.pulse_reset()
+class Context:
+    def __init__(self):
+        self.m = Machine(CPUType.M68000, 1024)
+        self.mem = self.m.mem
+        self.cpu = self.m.cpu
+        self.traps = self.m.traps
 
-    def end_func(opcode, pc):
-        cpu.end()
+        self.mem.w32(0, 0x800)  # init sp
+        self.mem.w32(4, 0x400)  # init pc
+        # set supervisor stacks
+        self.cpu.w_isp(0x700)
+        self.cpu.w_msp(0x780)
+        # trigger reset (read sp and init pc)
+        self.cpu.pulse_reset()
 
-    tid = traps.setup(end_func)
-    opc_end = 0xA000 | tid
-    return m, mem, cpu, traps, 0x400, opc_end
+        def end_func(opcode, pc):
+            self.cpu.end()
+
+        tid = self.traps.setup(end_func)
+        self.opc_end = 0xA000 | tid
+        self.code = 0x400
+
+    def cleanup(self):
+        self.m.cleanup()
 
 
-def write_traps(mem, code, opc, num, opc_end):
-    ptr = code
+def write_traps(ctx, num, addr, opc):
+    ptr = addr
     for i in range(num):
-        mem.w16(ptr, opc)
+        ctx.mem.w16(ptr, opc)
         ptr += 2
-    mem.w16(ptr, opc_end)
+    ctx.mem.w16(ptr, ctx.opc_end)
 
 
-def machine68k_machine_traps_benchmark(benchmark):
-    m, mem, cpu, traps, code, opc_end = setup_machine()
-
-    total = 10000
+def setup_run(ctx, total, func, **trap_args):
     count = 0
 
-    def dummy(opc, pc):
+    def wrap(opcode, pc):
         nonlocal count
         count += 1
+        func(opcode, pc)
 
-    tid = traps.setup(dummy)
+    tid = ctx.traps.setup(wrap, **trap_args)
     opc = 0xA000 | tid
 
-    write_traps(mem, code, opc, total, opc_end)
+    write_traps(ctx, total, ctx.code, opc)
 
     def run():
         nonlocal count
         count = 0
-        cpu.pulse_reset()
-        cycles = cpu.execute(100_000)
+        ctx.cpu.pulse_reset()
+        cycles = ctx.cpu.execute(100_000)
         assert count == total
         assert cycles == (total + 1) * 4
 
-    benchmark(run)
-    m.cleanup()
+    return run
 
 
-def machine68k_machine_defer_traps_benchmark(benchmark):
-    m, mem, cpu, traps, code, opc_end = setup_machine()
+def dummy_trap(opc, pc):
+    pass
 
+
+def fibo(n):
+    if n in {0, 1}:
+        return n
+    return fibo(n - 1) + fibo(n - 2)
+
+
+def fibo_trap(opc, pc):
+    fibo(8)
+
+
+def machine68k_machine_dummy_traps_benchmark(benchmark):
+    c = Context()
     total = 10000
-    count = 0
 
-    def dummy(opc, pc):
-        nonlocal count
-        count += 1
-
-    tid = traps.setup(dummy, defer=True)
-    opc = 0xA000 | tid
-
-    write_traps(mem, code, opc, total, opc_end)
-
-    def run():
-        nonlocal count
-        count = 0
-        cpu.pulse_reset()
-        cycles = cpu.execute(100_000)
-        assert count == total
-        assert cycles == (total + 1) * 4
-
-    benchmark(run)
-    m.cleanup()
+    benchmark(setup_run(c, total, dummy_trap))
+    c.cleanup()
 
 
-def machine68k_machine_defer_traps_oldpc_benchmark(benchmark):
-    m, mem, cpu, traps, code, opc_end = setup_machine()
-
+def machine68k_machine_dummy_traps_defer_benchmark(benchmark):
+    c = Context()
     total = 10000
-    count = 0
 
-    def dummy(opc, pc):
-        nonlocal count
-        count += 1
+    benchmark(setup_run(c, total, dummy_trap, defer=True))
+    c.cleanup()
 
-    tid = traps.setup(dummy, defer=True, old_pc=True)
-    opc = 0xA000 | tid
 
-    write_traps(mem, code, opc, total, opc_end)
+def machine68k_machine_dummy_traps_defer_oldpc_benchmark(benchmark):
+    c = Context()
+    total = 10000
 
-    def run():
-        nonlocal count
-        count = 0
-        cpu.pulse_reset()
-        cycles = cpu.execute(100_000)
-        assert count == total
-        assert cycles == (total + 1) * 4
+    benchmark(setup_run(c, total, dummy_trap, defer=True, old_pc=True))
+    c.cleanup()
 
-    benchmark(run)
-    m.cleanup()
+
+def machine68k_machine_fibo_traps_benchmark(benchmark):
+    c = Context()
+    total = 1000
+
+    benchmark(setup_run(c, total, fibo_trap))
+    c.cleanup()
+
+
+def machine68k_machine_fibo_traps_defer_benchmark(benchmark):
+    c = Context()
+    total = 1000
+
+    benchmark(setup_run(c, total, fibo_trap, defer=True))
+    c.cleanup()
+
+
+def machine68k_machine_fibo_traps_defer_oldpc_benchmark(benchmark):
+    c = Context()
+    total = 1000
+
+    benchmark(setup_run(c, total, fibo_trap, defer=True, old_pc=True))
+    c.cleanup()
