@@ -16,6 +16,9 @@ cdef class Traps:
     trap_init()
     self.func_map = {}
 
+  def cleanup(self):
+    pass
+
   def setup(self, py_func, auto_rts=False, one_shot=False, defer=False):
     cdef int flags
     flags = TRAP_FLAG_DEFAULT
