@@ -160,6 +160,7 @@ cdef class CPU:
   def __cinit__(self, CPUType cpu_type):
     m68k_set_cpu_type(<unsigned int>cpu_type)
     m68k_init()
+    cpu_init()
     self.cpu_type = cpu_type
 
   def cleanup(self):
@@ -232,6 +233,8 @@ cdef class CPU:
     # recursion?
     if flags == CPU_END_RECURSE_EXECUTE:
       raise RuntimeError("execute() called recursively")
+    elif flags == CPU_END_NESTING_TOO_DEEP:
+      raise RuntimeError("execute() nesting too deep")
     # if execution was ended by an error then we assume run_exc was set
     # and we will raise now the error in this function
     elif (flags & CPU_END_ERROR_MASK) != 0:
@@ -241,6 +244,9 @@ cdef class CPU:
 
   def end(self):
     cpu_end(CPU_END_USER)
+
+  def cycles_run(self):
+    return cpu_cycles_run()
 
   def set_pc_changed_callback(self, py_func):
     global pc_changed_func

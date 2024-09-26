@@ -30,11 +30,18 @@ typedef unsigned int uint;
 #define CPU_END_MEM_WRITE_FUNC_ERROR    0x0800
 
 #define CPU_END_RECURSE_EXECUTE         0x1000
+#define CPU_END_NESTING_TOO_DEEP        0x2000
 #define CPU_END_ERROR_MASK              0xfff0
 
-/* used by mem or trap internally only! */
+extern void cpu_init(void);
+
+/* return cycles (up to max_cycles) */
+extern int cpu_execute(int max_cycles, int *got_cycles);
+
+/* during an execute() call end the execution */
 extern void cpu_end(int flag);
 
-extern int cpu_execute(int max_cycles, int *got_cycles);
+/* return cycles consumed so far during an execute() call */
+extern int cpu_cycles_run(void);
 
 #endif

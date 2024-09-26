@@ -15,7 +15,10 @@ cdef extern from "cpu.h":
   int CPU_END_MEM_WRITE_FUNC_ERROR
 
   int CPU_END_RECURSE_EXECUTE
+  int CPU_END_NESTING_TOO_DEEP
   int CPU_END_ERROR_MASK
 
+  void cpu_init()
   void cpu_end(int flag)
   int cpu_execute(int max_cycles, int *got_cycles);
+  int cpu_cycles_run()

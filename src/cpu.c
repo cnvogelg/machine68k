@@ -18,36 +18,78 @@
 #define D(x)
 #endif
 
-static int end_flags;
-static int execute_lock;
+#define MAX_NESTING 16
+
+#define RUN_MODE_IDLE          0
+#define RUN_MODE_EXECUTE       1
+#define RUN_MODE_DEFER_TRAP    2
+
+typedef struct state {
+  int end_flags;
+  int cycles;
+  int run_mode;
+  int nesting;
+} state_t;
+
+static state_t states[MAX_NESTING];
+static state_t *cur_state;
+static int nesting;
+
+static void init_state(state_t *state)
+{
+  state->end_flags = 0;
+  state->cycles = 0;
+  state->run_mode = RUN_MODE_IDLE;
+}
+
+void cpu_init(void)
+{
+  nesting = 0;
+  for(int i=0;i<MAX_NESTING;i++) {
+    states[i].nesting = i;
+  }
+
+  cur_state = &states[0];
+  init_state(cur_state);
+}
 
 void cpu_end(int flag)
 {
-  if(end_flags == 0) {
+  if(cur_state->end_flags == 0) {
     m68k_end_timeslice();
   }
 
-  end_flags |= flag;
-  D((" cpu_end %08x\n", end_flags));
+  cur_state->end_flags |= flag;
+  D(("#%d cpu_end %08x\n", cur_state->nesting, cur_state->end_flags));
 }
 
 int cpu_execute(int max_cycles, int *got_cycles)
 {
   /* make sure we do not recurse while runnning m68k_execute()!
      use deferred traps for that. */
-  if(execute_lock) {
+  if(cur_state->run_mode == RUN_MODE_EXECUTE) {
     return CPU_END_RECURSE_EXECUTE;
   }
 
-  int total_cycles = 0;
-  int local_end_flags = 0;
-  D(("exec loop begin\n"));
+  /* nesting */
+  int nested = 0;
+  if(cur_state->run_mode == RUN_MODE_DEFER_TRAP) {
+    if(nesting == (MAX_NESTING - 1)) {
+      return CPU_END_NESTING_TOO_DEEP;
+    }
+
+    nesting++;
+    cur_state = &states[nesting];
+    nested = 1;
+  }
+
+  init_state(cur_state);
+
+  D(("#%d exec loop begin\n", cur_state->nesting));
   while(1) {
     /* clear end flag for this run */
-    end_flags = 0;
-
-    /* set a lock */
-    execute_lock = 1;
+    cur_state->end_flags = 0;
+    cur_state->run_mode = RUN_MODE_EXECUTE;
 
     /* call musashi CPU emulator.
        callbacks triggered here might set end_flags and
@@ -55,20 +97,16 @@ int cpu_execute(int max_cycles, int *got_cycles)
        otherwise it will only return if the cycles are
        used up.
     */
-    D((" begin execute. max=%d pc=%x\n", max_cycles, m68k_get_reg(NULL, M68K_REG_PC)));
+    D(("#%d begin execute. max=%d cycles=%d pc=%x\n",
+      cur_state->nesting, max_cycles, cur_state->cycles,
+      m68k_get_reg(NULL, M68K_REG_PC)));
+
     int cycles = m68k_execute(max_cycles);
-    D((" end execute. cyc=%d pc=%x\n", cycles, m68k_get_reg(NULL, M68K_REG_PC)));
+    cur_state->cycles += cycles;
 
-    /* release lock */
-    execute_lock = 0;
-
-    total_cycles += cycles;
-
-    /* copy end_flags into own local copy right now
-       since a deferred trap might call cpu_execute() recursively
-       and overwrite end_flags.
-    */
-    local_end_flags = end_flags;
+    D(("#%d end execute. cyc=%d cycles=%d pc=%x\n",
+      cur_state->nesting, cycles, cur_state->cycles,
+      m68k_get_reg(NULL, M68K_REG_PC)));
 
     /* if an error occurred then abort right now.
        do not call any deferred traps.
@@ -76,14 +114,16 @@ int cpu_execute(int max_cycles, int *got_cycles)
        it may be called manually later on with trap_defer_call()
        but usually you don't need it anyway.
     */
-    if(local_end_flags & CPU_END_ERROR_MASK) {
+    if(cur_state->end_flags & CPU_END_ERROR_MASK) {
       break;
     }
 
     /* check for deferred trap */
-    if(local_end_flags & CPU_END_TRAP_DEFER) {
+    if(cur_state->end_flags & CPU_END_TRAP_DEFER) {
       /* remove flag */
-      local_end_flags &= ~CPU_END_TRAP_DEFER;
+      cur_state->end_flags &= ~CPU_END_TRAP_DEFER;
+
+      cur_state->run_mode = RUN_MODE_DEFER_TRAP;
 
       /* execute trap now deferred after execute().
          here a recursive cpu_execute() might happen...
@@ -92,29 +132,47 @@ int cpu_execute(int max_cycles, int *got_cycles)
 
       /* if trap failed then set error flag */
       if(result != TRAP_RESULT_OK) {
-        local_end_flags |= CPU_END_TRAP_ERROR;
+        cur_state->end_flags |= CPU_END_TRAP_ERROR;
       }
     }
 
+    max_cycles -= cycles;
+
     /* no more cycles left? */
-    if(max_cycles < cycles) {
-      local_end_flags |= CPU_END_MAX_CYCLES;
+    if(max_cycles <= 0) {
+      cur_state->end_flags |= CPU_END_MAX_CYCLES;
       break;
     }
 
     /* end run? */
-    if(local_end_flags != 0) {
+    if(cur_state->end_flags != 0) {
       break;
     }
-
-    max_cycles -= cycles;
   }
-  D(("exec loop end: %x\n", local_end_flags));
+  D(("#%d exec loop end: %x\n", cur_state->nesting, cur_state->end_flags));
 
   /* return total cycles */
   if(got_cycles != NULL) {
-    *got_cycles = total_cycles;
+    *got_cycles = cur_state->cycles;
+  }
+  int end_flags = cur_state->end_flags;
+
+  cur_state->cycles = 0;
+  cur_state->run_mode = RUN_MODE_IDLE;
+
+  if(nested) {
+    nesting--;
+    cur_state = &states[nesting];
   }
 
-  return local_end_flags;
+  return end_flags;
+}
+
+int cpu_cycles_run(void)
+{
+  int cycles = cur_state->cycles;
+  if(cur_state->run_mode == RUN_MODE_EXECUTE) {
+    cycles += m68k_cycles_run();
+  }
+  return cycles;
 }

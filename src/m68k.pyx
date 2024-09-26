@@ -19,6 +19,7 @@ cdef extern from "m68k.h":
   void m68k_pulse_reset()
   int m68k_execute(int num_cycles)
   void m68k_end_timeslice()
+  int m68k_cycles_run()
 
   unsigned int m68k_get_reg(void* context, m68k_register_t reg)
   void m68k_set_reg(m68k_register_t reg, unsigned int value)

@@ -1,6 +1,6 @@
 import pytest
 from machine68k import Machine, CPUType
-from opcodes import op_reset, op_jsr, op_rts
+from opcodes import op_reset, op_jsr, op_rts, op_jmp
 
 
 def setup_machine():
@@ -32,12 +32,41 @@ def gen_code(mem, code, opc):
     mem.w16(code + 8, op_rts)
 
 
-def machine68k_machine_simple_reset_test():
+def machine68k_machine_simple_run_test():
     m, mem, cpu, traps, code, opc = setup_machine()
     mem.w16(code, opc)
     cycles = cpu.execute(2000)
+    # after execute cycles_run() are cleared
+    assert cpu.cycles_run() == 0
     m.cleanup()
     assert cycles == 4
+
+
+def machine68k_machine_run_dual_test():
+    m, mem, cpu, traps, code, opc = setup_machine()
+    mem.w16(code, opc)
+    # first run
+    cycles = cpu.execute(2000)
+    assert cycles == 4
+    # second run
+    cpu.w_pc(code)
+    cycles = cpu.execute(2000)
+    assert cycles == 4
+    m.cleanup()
+
+
+def machine68k_machine_max_cycles_test():
+    m, mem, cpu, traps, code, opc = setup_machine()
+    # endless loop
+    mem.w16(code, op_jmp)
+    mem.w32(code + 2, code)
+    # exact cycles
+    cycles = cpu.execute(40)
+    assert cycles == 40
+    # too few
+    cycles = cpu.execute(10)
+    assert cycles == 12
+    m.cleanup()
 
 
 # ----- test cpu callback funcs -----
@@ -134,6 +163,8 @@ def machine68k_machine_trap_test():
     a = []
 
     def my_func(opcode, pc):
+        # in a normal trap the current trap is not accounted, yet
+        assert cpu.cycles_run() == 0
         a.append(opcode)
         a.append(pc)
 
@@ -167,6 +198,8 @@ def machine68k_machine_trap_defer_test():
     a = []
 
     def my_func(opcode, pc):
+        # in a deferred trap the trap is already accounted for
+        assert cpu.cycles_run() == 4
         a.append(opcode)
         a.append(pc)
 
@@ -185,6 +218,8 @@ def machine68k_machine_trap_defer_oldpc_test():
     a = []
 
     def my_func(opcode, pc):
+        # in a deferred trap the trap is already accounted for
+        assert cpu.cycles_run() == 4
         a.append(opcode)
         a.append(pc)
         assert cpu.r_pc() == pc
@@ -203,6 +238,8 @@ def machine68k_machine_trap_defer_raise_test():
     m, mem, cpu, traps, code, opc_end = setup_machine()
 
     def my_func(opcode, pc):
+        # in a deferred trap the trap is already accounted for
+        assert cpu.cycles_run() == 4
         raise ValueError("foo")
 
     tid = traps.setup(my_func, defer=True)
@@ -219,6 +256,7 @@ def machine68k_machine_trap_autorts_test():
     a = []
 
     def my_func(opcode, pc):
+        assert cpu.cycles_run() == 20
         a.append(opcode)
         a.append(pc)
 
@@ -238,6 +276,7 @@ def machine68k_machine_trap_autorts_raise_test():
     m, mem, cpu, traps, code, opc_end = setup_machine()
 
     def my_func(opcode, pc):
+        assert cpu.cycles_run() == 20
         raise ValueError("foo")
 
     tid = traps.setup(my_func, auto_rts=True)
@@ -257,6 +296,7 @@ def machine68k_machine_trap_autorts_defer_test():
     instr = []
 
     def my_func(opcode, pc):
+        assert cpu.cycles_run() == 24
         a.append(opcode)
         a.append(pc)
 
@@ -282,6 +322,7 @@ def machine68k_machine_trap_autorts_defer_raise_test():
     m, mem, cpu, traps, code, opc_end = setup_machine()
 
     def my_func(opcode, pc):
+        assert cpu.cycles_run() == 24
         raise ValueError("foo")
 
     tid = traps.setup(my_func, auto_rts=True, defer=True)
@@ -323,10 +364,14 @@ def machine68k_machine_recurse_defer_test():
     m, mem, cpu, traps, code, opc_end = setup_machine()
 
     def my_func(opcode, pc):
+        # these are the cycles of the main execute
+        assert cpu.cycles_run() == 4
         pc = cpu.r_pc()
         cpu.w_pc(code + 10)
         cycles = cpu.execute(1000)
         assert cycles == 4
+        # these are the cycles of the sub run
+        assert cpu.cycles_run() == 4
         cpu.w_pc(pc)
 
     tid = traps.setup(my_func, defer=True)
@@ -353,12 +398,20 @@ def machine68k_machine_recurse_twice_test():
     a = []
 
     def my_func(opcode, pc):
+        # cycles of code trap
+        assert cpu.cycles_run() == 4
         pc = cpu.r_pc()
         cpu.w_pc(code + 10)
-        cpu.execute(1000)
+        cycles = cpu.execute(1000)
         cpu.w_pc(pc)
+        # sub run cycles: opc2 + opc_end
+        assert cycles == 8
+        # here we get the cycles of the main run: opc (deferred)
+        assert cpu.cycles_run() == 4
 
     def my_func2(opcode, pc):
+        # cycles of code + 10 trap
+        assert cpu.cycles_run() == 4
         a.append(opcode)
         a.append(pc)
 
@@ -381,7 +434,9 @@ def machine68k_machine_recurse_twice_test():
 
     cpu.set_instr_hook_callback(out)
 
-    cpu.execute(2000)
+    cycles = cpu.execute(2000)
+    # main run cycles: opc + opc_end
+    assert cycles == 8
     m.cleanup()
     assert instr == [code, code + 10, code + 12, code + 2]
     assert a == [opc2, code + 10]
