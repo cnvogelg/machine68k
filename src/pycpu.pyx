@@ -153,6 +153,12 @@ cdef class CPUContext:
   def __dealloc__(self):
     free(self.data)
 
+# public ExecutionResult
+@dataclasses.dataclass
+cdef class ExecutionResult:
+  cdef readonly int cycles
+  cdef readonly bint user_end
+
 # public CPU class
 cdef class CPU:
   cdef readonly CPUType cpu_type
@@ -239,8 +245,10 @@ cdef class CPU:
     # and we will raise now the error in this function
     elif (flags & CPU_END_ERROR_MASK) != 0:
       raise_run_exc()
+    # flag user end
+    cdef bint user_end = (flags & CPU_END_USER) != 0
 
-    return total_cycles
+    return ExecutionResult(total_cycles, user_end)
 
   def end(self):
     cpu_end(CPU_END_USER)

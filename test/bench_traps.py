@@ -53,9 +53,9 @@ def setup_run(ctx, total, func, **trap_args):
         nonlocal count
         count = 0
         ctx.cpu.pulse_reset()
-        cycles = ctx.cpu.execute(100_000)
+        er = ctx.cpu.execute(100_000)
         assert count == total
-        assert cycles == (total + 1) * 4
+        assert er.cycles == (total + 1) * 4
 
     return run
 

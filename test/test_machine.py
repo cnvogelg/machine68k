@@ -35,23 +35,23 @@ def gen_code(mem, code, opc):
 def machine68k_machine_simple_run_test():
     m, mem, cpu, traps, code, opc = setup_machine()
     mem.w16(code, opc)
-    cycles = cpu.execute(2000)
+    er = cpu.execute(2000)
     # after execute cycles_run() are cleared
     assert cpu.cycles_run() == 0
     m.cleanup()
-    assert cycles == 4
+    assert er.cycles == 4
 
 
 def machine68k_machine_run_dual_test():
     m, mem, cpu, traps, code, opc = setup_machine()
     mem.w16(code, opc)
     # first run
-    cycles = cpu.execute(2000)
-    assert cycles == 4
+    er = cpu.execute(2000)
+    assert er.cycles == 4
     # second run
     cpu.w_pc(code)
-    cycles = cpu.execute(2000)
-    assert cycles == 4
+    er = cpu.execute(2000)
+    assert er.cycles == 4
     m.cleanup()
 
 
@@ -61,11 +61,11 @@ def machine68k_machine_max_cycles_test():
     mem.w16(code, op_jmp)
     mem.w32(code + 2, code)
     # exact cycles
-    cycles = cpu.execute(40)
-    assert cycles == 40
+    er = cpu.execute(40)
+    assert er.cycles == 40
     # too few
-    cycles = cpu.execute(10)
-    assert cycles == 12
+    er = cpu.execute(10)
+    assert er.cycles == 12
     m.cleanup()
 
 
@@ -172,10 +172,10 @@ def machine68k_machine_trap_test():
     opc = 0xA000 | tid
     mem.w16(code, opc)
     mem.w16(code + 2, opc_end)
-    cycles = cpu.execute(2000)
+    er = cpu.execute(2000)
     m.cleanup()
     assert a == [opc, code]
-    assert cycles == 8
+    assert er.cycles == 8
 
 
 def machine68k_machine_trap_raise_test():
@@ -207,9 +207,9 @@ def machine68k_machine_trap_defer_test():
     opc = 0xA000 | tid
     mem.w16(code, opc)
     mem.w16(code + 2, opc_end)
-    cycles = cpu.execute(2000)
+    er = cpu.execute(2000)
     m.cleanup()
-    assert cycles == 8
+    assert er.cycles == 8
     assert a == [opc, code]
 
 
@@ -228,9 +228,9 @@ def machine68k_machine_trap_defer_oldpc_test():
     opc = 0xA000 | tid
     mem.w16(code, opc)
     mem.w16(code + 2, opc_end)
-    cycles = cpu.execute(2000)
+    er = cpu.execute(2000)
     m.cleanup()
-    assert cycles == 8
+    assert er.cycles == 8
     assert a == [opc, code]
 
 
@@ -266,10 +266,10 @@ def machine68k_machine_trap_autorts_test():
     mem.w32(code + 2, code + 8)
     mem.w16(code + 6, opc_end)
     mem.w16(code + 8, opc)
-    cycles = cpu.execute(2000)
+    er = cpu.execute(2000)
     m.cleanup()
     assert a == [opc, code + 8]
-    assert cycles == 28
+    assert er.cycles == 28
 
 
 def machine68k_machine_trap_autorts_raise_test():
@@ -311,11 +311,11 @@ def machine68k_machine_trap_autorts_defer_test():
         instr.append(pc)
 
     cpu.set_instr_hook_callback(out)
-    cycles = cpu.execute(2000)
+    er = cpu.execute(2000)
     m.cleanup()
     assert instr == [code, code + 8, code + 6]
     assert a == [opc, code + 8]
-    assert cycles == 28
+    assert er.cycles == 28
 
 
 def machine68k_machine_trap_autorts_defer_raise_test():
@@ -345,8 +345,8 @@ def machine68k_machine_recurse_test():
     def my_func(opcode, pc):
         pc = cpu.r_pc()
         cpu.w_pc(code + 10)
-        cycles = cpu.execute(1000)
-        assert cycles == 10
+        er = cpu.execute(1000)
+        assert er.cycles == 10
         cpu.w_pc(pc)
 
     tid = traps.setup(my_func)
@@ -368,8 +368,8 @@ def machine68k_machine_recurse_defer_test():
         assert cpu.cycles_run() == 4
         pc = cpu.r_pc()
         cpu.w_pc(code + 10)
-        cycles = cpu.execute(1000)
-        assert cycles == 4
+        er = cpu.execute(1000)
+        assert er.cycles == 4
         # these are the cycles of the sub run
         assert cpu.cycles_run() == 4
         cpu.w_pc(pc)
@@ -387,9 +387,9 @@ def machine68k_machine_recurse_defer_test():
 
     cpu.set_instr_hook_callback(out)
 
-    cycles = cpu.execute(2000)
+    er = cpu.execute(2000)
     m.cleanup()
-    assert cycles == 8
+    assert er.cycles == 8
     assert instr == [code, code + 10, code + 2]
 
 
@@ -402,10 +402,10 @@ def machine68k_machine_recurse_twice_test():
         assert cpu.cycles_run() == 4
         pc = cpu.r_pc()
         cpu.w_pc(code + 10)
-        cycles = cpu.execute(1000)
+        er = cpu.execute(1000)
         cpu.w_pc(pc)
         # sub run cycles: opc2 + opc_end
-        assert cycles == 8
+        assert er.cycles == 8
         # here we get the cycles of the main run: opc (deferred)
         assert cpu.cycles_run() == 4
 
@@ -434,9 +434,9 @@ def machine68k_machine_recurse_twice_test():
 
     cpu.set_instr_hook_callback(out)
 
-    cycles = cpu.execute(2000)
+    er = cpu.execute(2000)
     # main run cycles: opc + opc_end
-    assert cycles == 8
+    assert er.cycles == 8
     m.cleanup()
     assert instr == [code, code + 10, code + 12, code + 2]
     assert a == [opc2, code + 10]
