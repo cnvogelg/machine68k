@@ -16,7 +16,7 @@ cdef extern from "m68k.h":
 
   void m68k_set_cpu_type(unsigned int cpu_type)
   void m68k_init()
-  void m68k_pulse_reset()
+  int m68k_pulse_reset()
   int m68k_execute(int num_cycles)
   void m68k_end_timeslice()
   int m68k_cycles_run()

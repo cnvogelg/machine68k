@@ -229,7 +229,7 @@ cdef class CPU:
     return self.r_reg_internal(M68K_REG_MSP)
 
   def pulse_reset(self):
-    m68k_pulse_reset()
+    return m68k_pulse_reset()
 
   def execute(self, num_cycles):
     clear_run_exc()

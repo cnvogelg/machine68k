@@ -1113,7 +1113,7 @@ void m68k_pulse_bus_error(void)
 }
 
 /* Pulse the RESET line on the CPU */
-void m68k_pulse_reset(void)
+int m68k_pulse_reset(void)
 {
 	/* Disable the PMMU on reset */
 	m68ki_cpu.pmmu_enabled = 0;
@@ -1152,6 +1152,8 @@ void m68k_pulse_reset(void)
 	CPU_RUN_MODE = RUN_MODE_NORMAL;
 
 	RESET_CYCLES = CYC_EXCEPTION[EXCEPTION_RESET];
+
+    return RESET_CYCLES;
 }
 
 /* Pulse the HALT line on the CPU */
