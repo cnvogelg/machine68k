@@ -11,6 +11,9 @@ from distutils import ccompiler
 from distutils.dir_util import remove_tree
 from distutils import log
 
+NAME = "machine68k"
+VERSION = "0.2.1"
+
 # has cython?
 try:
     from Cython.Build import cythonize
@@ -216,6 +219,8 @@ if use_cython:
     extensions = cythonize(extensions, language_level="3str")
 
 setup(
+    name=NAME,
+    version=VERSION,
     cmdclass=cmdclass,
     command_options=command_options,
     ext_modules=extensions,
