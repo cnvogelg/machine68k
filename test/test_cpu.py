@@ -41,6 +41,54 @@ def machine68k_cpu_rws_reg_test():
         cpu.ws_reg(Register.D0, "hello")
 
 
+def machine68k_cpu_rw_partial_reg_test():
+    cpu = CPU(CPUType.M68000)
+    assert cpu.cpu_type == CPUType.M68000
+    cpu.w_reg(Register.D0, 0xCAFEBABE)
+    # read partial
+    assert cpu.r32_reg(Register.D0) == 0xCAFEBABE
+    assert cpu.r16_reg(Register.D0) == 0xBABE
+    assert cpu.r8_reg(Register.D0) == 0xBE
+    # write partial
+    cpu.w8_reg(Register.D0, 0xFE)
+    assert cpu.r_reg(Register.D0) == 0xCAFEBAFE
+    cpu.w16_reg(Register.D0, 0xF000)
+    assert cpu.r_reg(Register.D0) == 0xCAFEF000
+    cpu.w32_reg(Register.D0, 0xDEADBEEF)
+    assert cpu.r_reg(Register.D0) == 0xDEADBEEF
+    # write too large
+    with pytest.raises(OverflowError):
+        cpu.w8_reg(Register.D0, 0xF00)
+    with pytest.raises(OverflowError):
+        cpu.w16_reg(Register.D0, 0xF0000)
+    with pytest.raises(OverflowError):
+        cpu.w32_reg(Register.D0, 0xF00000000)
+
+
+def machine68k_cpu_rws_partial_reg_test():
+    cpu = CPU(CPUType.M68000)
+    assert cpu.cpu_type == CPUType.M68000
+    cpu.w_reg(Register.D0, 0xF000F0F0)
+    # read partial
+    assert cpu.r32s_reg(Register.D0) == -268373776
+    assert cpu.r16s_reg(Register.D0) == -3856
+    assert cpu.r8s_reg(Register.D0) == -16
+    # write partial
+    cpu.w8s_reg(Register.D0, -1)
+    assert cpu.r_reg(Register.D0) == 0xF000F0FF
+    cpu.w16s_reg(Register.D0, -1)
+    assert cpu.r_reg(Register.D0) == 0xF000FFFF
+    cpu.w32s_reg(Register.D0, -1)
+    assert cpu.r_reg(Register.D0) == 0xFFFFFFFF
+    # write too large
+    with pytest.raises(OverflowError):
+        cpu.w8s_reg(Register.D0, 0x80)
+    with pytest.raises(OverflowError):
+        cpu.w16s_reg(Register.D0, 0x8000)
+    with pytest.raises(OverflowError):
+        cpu.w32s_reg(Register.D0, 0x80000000)
+
+
 def machine68k_cpu_rw_context_test():
     cpu = CPU(CPUType.M68000)
     ctx = cpu.get_cpu_context()

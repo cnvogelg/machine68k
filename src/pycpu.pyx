@@ -180,7 +180,9 @@ cdef class CPU:
   cdef void w_reg_internal(self, m68k_register_t reg, unsigned int v):
     m68k_set_reg(reg, v)
 
-  def w_reg(self, reg, val):
+  # basic register access
+
+  def w_reg(self, reg, unsigned int val):
     self.w_reg_internal(reg,val)
 
   def r_reg(self,reg):
@@ -191,6 +193,70 @@ cdef class CPU:
 
   def rs_reg(self, m68k_register_t reg):
     return <int>m68k_get_reg(NULL, reg)
+
+  # unsigned partial update
+
+  def w8_reg(self, reg, unsigned int val):
+    if val > 0xff:
+      raise OverflowError("Not a ubyte value!")
+    reg_val = self.r_reg_internal(reg)
+    reg_val = (reg_val & 0xffffff00) | val
+    self.w_reg_internal(reg, reg_val)
+
+  def w16_reg(self, reg, unsigned int val):
+    if val > 0xffff:
+      raise OverflowError("Not a uword value!")
+    reg_val = self.r_reg_internal(reg)
+    reg_val = (reg_val & 0xffff0000) | val
+    self.w_reg_internal(reg, reg_val)
+
+  def w32_reg(self, reg, unsigned int val):
+    if val > 0xffffffff:
+      raise OverflowError("Not a ulong value!")
+    self.w_reg_internal(reg, val & 0xffffffff)
+
+  def r8_reg(self, reg):
+    return self.r_reg_internal(reg) & 0xff
+
+  def r16_reg(self, reg):
+    return self.r_reg_internal(reg) & 0xffff
+
+  def r32_reg(self, reg):
+    return self.r_reg_internal(reg)
+
+  # signed partial update of register
+
+  def w8s_reg(self, reg, int val):
+    if val < -0x80 or val >= 0x80:
+      raise OverflowError("Not a byte value!")
+    reg_val = self.r_reg_internal(reg)
+    reg_val = (reg_val & 0xffffff00) | ((<unsigned int>val) & 0xff)
+    self.w_reg_internal(reg, reg_val)
+
+  def w16s_reg(self, reg, int val):
+    if val < -0x8000 or val >= 0x8000:
+      raise OverflowError("Not a word value!")
+    reg_val = self.r_reg_internal(reg)
+    reg_val = (reg_val & 0xffff0000) | ((<unsigned int>val) & 0xffff)
+    self.w_reg_internal(reg, reg_val)
+
+  def w32s_reg(self, reg, int val):
+    if val < -0x80000000 or val >= 0x80000000:
+      raise OverflowError("Not a long value!")
+    self.w_reg_internal(reg, (<unsigned int>val) & 0xffffffff)
+
+  def r8s_reg(self, reg):
+    val = <int>self.r_reg_internal(reg)
+    return ((val & 0xff) ^ 0x80) - 0x80
+
+  def r16s_reg(self, reg):
+    val = <int>self.r_reg_internal(reg)
+    return ((val & 0xffff) ^ 0x8000) - 0x8000
+
+  def r32s_reg(self, reg):
+    return <int>self.r_reg_internal(reg)
+
+  # special registers
 
   def w_pc(self, val):
     self.w_reg_internal(M68K_REG_PC,val)
@@ -228,6 +294,8 @@ cdef class CPU:
   def r_msp(self):
     return self.r_reg_internal(M68K_REG_MSP)
 
+  # cpu control
+
   def pulse_reset(self):
     return m68k_pulse_reset()
 
@@ -256,6 +324,8 @@ cdef class CPU:
   def cycles_run(self):
     return cpu_cycles_run()
 
+  # callbacks
+
   def set_pc_changed_callback(self, py_func):
     global pc_changed_func
     pc_changed_func = py_func
@@ -280,6 +350,8 @@ cdef class CPU:
     else:
       m68k_set_instr_hook_callback(instr_hook_func_wrapper)
 
+  # disassembler
+
   def disassemble(self, unsigned int pc):
     cdef char line[80]
     cdef unsigned int size
@@ -291,6 +363,8 @@ cdef class CPU:
     cdef unsigned int size
     size = m68k_disassemble_raw(line, pc, &raw_mem[0], NULL, self.cpu_type)
     return (size, line.decode('latin-1'))
+
+  # CPU context handling
 
   def get_cpu_context(self):
     cdef unsigned int size = m68k_context_size()
