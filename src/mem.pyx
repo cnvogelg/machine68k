@@ -5,7 +5,7 @@ cdef extern from "mem.h":
   ctypedef void (*invalid_func_t)(int mode, int width, uint addr, void *ctx)
   ctypedef void (*trace_func_t)(int mode, int width, uint addr, uint val, void *ctx)
 
-  int mem_init(uint ram_size_kib)
+  int mem_init(uint ram_size_kib, void *own_ram)
   void mem_free()
 
   void mem_set_invalid_func(invalid_func_t func, void *ctx)

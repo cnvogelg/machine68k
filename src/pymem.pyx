@@ -57,7 +57,7 @@ cdef class Memory:
   cdef object invalid_func
 
   def __cinit__(self, ram_size_kib):
-    mem_init(ram_size_kib)
+    mem_init(ram_size_kib, NULL)
     self.ram_size_kib = ram_size_kib
     self.ram_bytes = ram_size_kib * 1024
     self.ram_ptr = mem_raw_ptr()

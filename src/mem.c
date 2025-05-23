@@ -19,6 +19,7 @@
 static uint8_t *ram_data;
 static uint     ram_size;
 static uint     ram_pages;
+static int      ram_data_alloced;
 
 static read_func_t    r_func[NUM_PAGES][3];
 static write_func_t   w_func[NUM_PAGES][3];
@@ -236,12 +237,19 @@ unsigned int m68k_read_disassembler_32 (unsigned int address)
 
 /* ----- API ----- */
 
-int mem_init(uint ram_size_kib)
+int mem_init(uint ram_size_kib, uint8_t *own_ram)
 {
   uint i;
   ram_pages = (ram_size_kib + 63) / 64;
   ram_size = ram_pages * 64 * 1024;
-  ram_data = (uint8_t *)malloc(ram_size);
+
+  if(own_ram != NULL) {
+    ram_data = own_ram;
+    ram_data_alloced = 0;
+  } else {
+    ram_data = (uint8_t *)malloc(ram_size);
+    ram_data_alloced = 1;
+  }
   memset(ram_data, 0, ram_size);
 
   for(i=0;i<NUM_PAGES;i++) {
@@ -271,7 +279,9 @@ int mem_init(uint ram_size_kib)
 
 void mem_free(void)
 {
-  free(ram_data);
+  if(ram_data_alloced) {
+    free(ram_data);
+  }
   ram_data = NULL;
 }
 
