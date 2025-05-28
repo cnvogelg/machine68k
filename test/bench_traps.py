@@ -74,7 +74,7 @@ def fibo_trap(opc, pc):
     fibo(8)
 
 
-def machine68k_machine_dummy_traps_benchmark(benchmark):
+def machine68k_bench_dummy_traps_benchmark(benchmark):
     c = Context()
     total = 10000
 
@@ -82,7 +82,7 @@ def machine68k_machine_dummy_traps_benchmark(benchmark):
     c.cleanup()
 
 
-def machine68k_machine_dummy_traps_defer_benchmark(benchmark):
+def machine68k_bench_dummy_traps_defer_benchmark(benchmark):
     c = Context()
     total = 10000
 
@@ -90,7 +90,7 @@ def machine68k_machine_dummy_traps_defer_benchmark(benchmark):
     c.cleanup()
 
 
-def machine68k_machine_dummy_traps_defer_oldpc_benchmark(benchmark):
+def machine68k_bench_dummy_traps_defer_oldpc_benchmark(benchmark):
     c = Context()
     total = 10000
 
@@ -98,7 +98,7 @@ def machine68k_machine_dummy_traps_defer_oldpc_benchmark(benchmark):
     c.cleanup()
 
 
-def machine68k_machine_fibo_traps_benchmark(benchmark):
+def machine68k_bench_fibo_traps_benchmark(benchmark):
     c = Context()
     total = 1000
 
@@ -106,7 +106,7 @@ def machine68k_machine_fibo_traps_benchmark(benchmark):
     c.cleanup()
 
 
-def machine68k_machine_fibo_traps_defer_benchmark(benchmark):
+def machine68k_bench_fibo_traps_defer_benchmark(benchmark):
     c = Context()
     total = 1000
 
@@ -114,7 +114,7 @@ def machine68k_machine_fibo_traps_defer_benchmark(benchmark):
     c.cleanup()
 
 
-def machine68k_machine_fibo_traps_defer_oldpc_benchmark(benchmark):
+def machine68k_bench_fibo_traps_defer_oldpc_benchmark(benchmark):
     c = Context()
     total = 1000
 
