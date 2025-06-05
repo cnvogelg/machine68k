@@ -3,9 +3,14 @@ from machine68k import Machine, CPUType
 from opcodes import op_reset, op_jsr, op_rts, op_jmp
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(params=["local", "remote"])
 def setup_machine(request):
-    m = Machine(CPUType.M68000, 1025)
+    mode = request.param
+    if mode == "remote":
+        client = request.getfixturevalue("remote_client")
+        m = client.get_machine("68000", 1024)
+    else:
+        m = Machine(CPUType.M68000, 1024)
     mem = m.mem
     cpu = m.cpu
     traps = m.traps
@@ -24,7 +29,8 @@ def setup_machine(request):
     tid = traps.setup(my_end)
     opc = 0xA000 | tid
     yield m, mem, cpu, traps, 0x400, opc
-    m.cleanup()
+    if mode == "remote":
+        client.release_machine()
 
 
 def gen_code(mem, code, opc):
