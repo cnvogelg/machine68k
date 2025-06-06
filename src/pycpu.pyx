@@ -174,6 +174,12 @@ cdef class CPU:
     self.set_reset_instr_callback(None)
     self.set_instr_hook_callback(None)
 
+  def get_cpu_type(self):
+    return self.cpu_type
+
+  def get_cpu_name(self):
+    return cpu_type_to_str(self.cpu_type)
+
   cdef unsigned int r_reg_internal(self, m68k_register_t reg):
     return m68k_get_reg(NULL, reg)
 

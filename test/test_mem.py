@@ -2,6 +2,12 @@ import pytest
 from machine68k import Memory, MemoryError
 
 
+def machine68k_mem_size_test():
+    mem = Memory(16)
+    assert mem.get_ram_size_kib() == 16
+    assert mem.get_ram_size_bytes() == 16 * 1024
+
+
 def machine68k_mem_rw_test():
     mem = Memory(16)
     assert mem.get_ram_size_kib() == 16

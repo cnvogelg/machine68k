@@ -7,8 +7,7 @@ from opcodes import op_reset, op_jsr, op_rts, op_jmp
 def setup_machine(request):
     mode = request.param
     if mode == "remote":
-        client = request.getfixturevalue("remote_client")
-        m = client.get_machine("68000", 1024)
+        m = request.getfixturevalue("remote_machine")
     else:
         m = Machine(CPUType.M68000, 1024)
     mem = m.mem
@@ -28,9 +27,7 @@ def setup_machine(request):
 
     tid = traps.setup(my_end)
     opc = 0xA000 | tid
-    yield m, mem, cpu, traps, 0x400, opc
-    if mode == "remote":
-        client.release_machine()
+    return m, mem, cpu, traps, 0x400, opc
 
 
 def gen_code(mem, code, opc):

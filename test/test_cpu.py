@@ -14,6 +14,13 @@ def machine68k_cpu_type_test():
     assert cpu_type_to_str("bla") is None
 
 
+def machine68k_cpu_type_test(cpu_type):
+    cpu = CPU(cpu_type)
+    assert cpu.get_cpu_type() == cpu_type
+    cpu_name = cpu_type_to_str(cpu_type)
+    assert cpu.get_cpu_name() == cpu_name
+
+
 def machine68k_cpu_rw_reg_test():
     cpu = CPU(CPUType.M68000)
     cpu.w_reg(Register.D0, 0xDEADBEEF)
