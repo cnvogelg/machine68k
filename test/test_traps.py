@@ -1,9 +1,24 @@
 import pytest
-from machine68k import Traps
+from machine68k import Machine, Traps, CPUType
 
 
-def machine68k_traps_trigger_test():
-    traps = Traps()
+@pytest.fixture(params=["traps", "local", "remote"])
+def traps(request):
+    mode = request.param
+    if mode == "cpu":
+        yield Traps()
+    elif mode == "local":
+        m = Machine(CPUType.M68000, 16)
+        yield m.traps
+        m.cleanup()
+    else:
+        rmachine68k = pytest.importorskip("rmachine68k")
+        client = request.getfixturevalue("remote_client")
+        m = rmachine68k.create_machine(client, "68000", 16)
+        yield m.traps
+
+
+def machine68k_traps_trigger_test(traps):
     a = []
 
     def my_func(opcode, pc):
@@ -17,8 +32,7 @@ def machine68k_traps_trigger_test():
     traps.free(tid)
 
 
-def machine68k_traps_raise_test():
-    traps = Traps()
+def machine68k_traps_raise_test(traps):
     a = []
     b = []
 
@@ -32,8 +46,7 @@ def machine68k_traps_raise_test():
     traps.free(tid)
 
 
-def machine68k_traps_defer_test():
-    traps = Traps()
+def machine68k_traps_defer_test(traps):
     a = []
 
     def my_func(opcode, pc):
@@ -53,9 +66,7 @@ def machine68k_traps_defer_test():
     traps.free(tid)
 
 
-def machine68k_traps_defer_raise_test():
-    traps = Traps()
-
+def machine68k_traps_defer_raise_test(traps):
     def my_func(opcode, pc):
         raise ValueError("bla")
 

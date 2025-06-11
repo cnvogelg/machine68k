@@ -1,5 +1,28 @@
 import pytest
-from machine68k import CPU, Register, CPUType, cpu_type_from_str, cpu_type_to_str
+from machine68k import (
+    Machine,
+    CPU,
+    Register,
+    CPUType,
+    cpu_type_from_str,
+    cpu_type_to_str,
+)
+
+
+@pytest.fixture(params=["cpu", "local", "remote"])
+def cpu(request):
+    mode = request.param
+    if mode == "cpu":
+        yield CPU(CPUType.M68000)
+    elif mode == "local":
+        m = Machine(CPUType.M68000, 16)
+        yield m.cpu
+        m.cleanup()
+    else:
+        rmachine68k = pytest.importorskip("rmachine68k")
+        client = request.getfixturevalue("remote_client")
+        m = rmachine68k.create_machine(client, "68000", 16)
+        yield m.cpu
 
 
 def machine68k_cpu_type_test():
@@ -21,8 +44,7 @@ def machine68k_cpu_type_test(cpu_type):
     assert cpu.get_cpu_name() == cpu_name
 
 
-def machine68k_cpu_rw_reg_test():
-    cpu = CPU(CPUType.M68000)
+def machine68k_cpu_rw_reg_test(cpu):
     cpu.w_reg(Register.D0, 0xDEADBEEF)
     assert cpu.r_reg(Register.D0) == 0xDEADBEEF
     # invalid values
@@ -34,9 +56,7 @@ def machine68k_cpu_rw_reg_test():
         cpu.w_reg(Register.D0, "hello")
 
 
-def machine68k_cpu_rws_reg_test():
-    cpu = CPU(CPUType.M68000)
-    assert cpu.cpu_type == CPUType.M68000
+def machine68k_cpu_rws_reg_test(cpu):
     cpu.ws_reg(Register.D0, -123)
     assert cpu.rs_reg(Register.D0) == -123
     # invalid values
@@ -48,9 +68,7 @@ def machine68k_cpu_rws_reg_test():
         cpu.ws_reg(Register.D0, "hello")
 
 
-def machine68k_cpu_rw_partial_reg_test():
-    cpu = CPU(CPUType.M68000)
-    assert cpu.cpu_type == CPUType.M68000
+def machine68k_cpu_rw_partial_reg_test(cpu):
     cpu.w_reg(Register.D0, 0xCAFEBABE)
     # read partial
     assert cpu.r32_reg(Register.D0) == 0xCAFEBABE
@@ -72,9 +90,7 @@ def machine68k_cpu_rw_partial_reg_test():
         cpu.w32_reg(Register.D0, 0xF00000000)
 
 
-def machine68k_cpu_rws_partial_reg_test():
-    cpu = CPU(CPUType.M68000)
-    assert cpu.cpu_type == CPUType.M68000
+def machine68k_cpu_rws_partial_reg_test(cpu):
     cpu.w_reg(Register.D0, 0xF000F0F0)
     # read partial
     assert cpu.r32s_reg(Register.D0) == -268373776
@@ -96,7 +112,6 @@ def machine68k_cpu_rws_partial_reg_test():
         cpu.w32s_reg(Register.D0, 0x80000000)
 
 
-def machine68k_cpu_rw_context_test():
-    cpu = CPU(CPUType.M68000)
+def machine68k_cpu_rw_context_test(cpu):
     ctx = cpu.get_cpu_context()
     cpu.set_cpu_context(ctx)
