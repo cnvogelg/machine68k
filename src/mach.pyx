@@ -3,6 +3,8 @@ from libc.string cimport memcpy, memset, strlen, strcpy
 # stdlib.h
 from libc.stdlib cimport malloc, free
 
+from cpython.bytes cimport PyBytes_FromStringAndSize
+
 import sys
 import dataclasses
 

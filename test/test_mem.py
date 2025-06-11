@@ -1,15 +1,29 @@
 import pytest
-from machine68k import Memory, MemoryError
+from machine68k import Memory, MemoryError, Machine, CPUType
 
 
-def machine68k_mem_size_test():
-    mem = Memory(16)
+@pytest.fixture(params=["mem", "local", "remote"])
+def mem(request):
+    mode = request.param
+    if mode == "mem":
+        yield Memory(16)
+    elif mode == "local":
+        m = Machine(CPUType.M68000, 16)
+        yield m.mem
+        m.cleanup()
+    else:
+        rmachine68k = pytest.importorskip("rmachine68k")
+        client = request.getfixturevalue("remote_client")
+        m = rmachine68k.create_machine(client, "68000", 16)
+        yield m.mem
+
+
+def machine68k_mem_size_test(mem):
     assert mem.get_ram_size_kib() == 16
     assert mem.get_ram_size_bytes() == 16 * 1024
 
 
-def machine68k_mem_rw_test():
-    mem = Memory(16)
+def machine68k_mem_rw_test(mem):
     assert mem.get_ram_size_kib() == 16
 
     mem.w8(0x100, 42)
@@ -79,9 +93,7 @@ def machine68k_mem_rw_test():
         mem.read(0, 0x10000)
 
 
-def machine68k_mem_rws_test():
-    mem = Memory(16)
-
+def machine68k_mem_rws_test(mem):
     mem.w8s(0x100, 42)
     assert mem.r8s(0x100) == 42
     mem.w8s(0x100, -23)
@@ -171,8 +183,7 @@ class InvalidMemAccess(object):
         self.match = (mode, width, addr)
 
 
-def machine68k_mem_cpu_rw_test():
-    mem = Memory(16)
+def machine68k_mem_cpu_rw_test(mem):
     assert mem.get_ram_size_kib() == 16
 
     mem.cpu_w8(0x100, 42)
@@ -224,9 +235,7 @@ def machine68k_mem_cpu_rw_test():
         mem.cpu_r32(0x10000)
 
 
-def machine68k_mem_cpu_rws_test():
-    mem = Memory(16)
-
+def machine68k_mem_cpu_rws_test(mem):
     mem.cpu_w8s(0x100, 42)
     assert mem.cpu_r8s(0x100) == 42
     mem.cpu_w8s(0x100, -23)
@@ -282,22 +291,29 @@ def machine68k_mem_cpu_rws_test():
         mem.cpu_r32s(0x10000)
 
 
-def machine68k_mem_block_test():
-    mem = Memory(16)
+def machine68k_mem_block_test(mem):
+    # write bytes block
     data = b"hello, world!"
     mem.w_block(0, data)
-    assert mem.r_block(0, len(data)) == data
+    res = mem.r_block(0, len(data))
+    assert res == data
+    # write bytearray block
     bdata = bytearray(data)
     mem.w_block(0x100, bdata)
-    assert mem.r_block(0x100, len(bdata)) == bdata
+    res = mem.r_block(0x100, len(bdata))
+    print(res, bdata)
+    assert res == bdata
+    # clear block and read back
     mem.clear_block(0x200, 100, 42)
-    assert mem.r_block(0x200, 100) == bytes([42] * 100)
+    res = mem.r_block(0x200, 100)
+    assert res == bytes([42] * 100)
+    # copy block and read back
     mem.copy_block(0x200, 0x300, 20)
-    assert mem.r_block(0x300, 21) == bytes([42] * 20) + b"\0"
+    res = mem.r_block(0x300, 21)
+    assert res == bytes([42] * 20) + b"\0"
 
 
-def machine68k_mem_cstr_test():
-    mem = Memory(16)
+def machine68k_mem_cstr_test(mem):
     data = "hello, world"
     mem.w_cstr(0, data)
     assert mem.r_cstr(0) == data
@@ -306,8 +322,7 @@ def machine68k_mem_cstr_test():
     assert mem.r_cstr(100) == empty
 
 
-def machine68k_mem_bstr_test():
-    mem = Memory(16)
+def machine68k_mem_bstr_test(mem):
     data = "hello, world"
     mem.w_bstr(0, data)
     assert mem.r_bstr(0) == data
@@ -336,8 +351,7 @@ class TraceAssert(object):
         self.match = (mode, width, addr, value)
 
 
-def machine68k_mem_trace_test():
-    mem = Memory(16)
+def machine68k_mem_trace_test(mem):
     with TraceAssert(mem, "R", 0, 0x100, 0):
         mem.cpu_r8(0x100)
     with TraceAssert(mem, "R", 1, 0x100, 0):
@@ -352,9 +366,7 @@ def machine68k_mem_trace_test():
         mem.cpu_w32(0x100, 0xCAFEBABE)
 
 
-def machine68k_mem_trace_error_test():
-    mem = Memory(16)
-
+def machine68k_mem_trace_error_test(mem):
     def trace_func(mode, width, addr, value):
         raise ValueError("bonk!")
 
@@ -368,9 +380,7 @@ def machine68k_mem_trace_error_test():
     mem.set_trace_func(None)
 
 
-def machine68k_mem_invalid_access_error_test():
-    mem = Memory(16)
-
+def machine68k_mem_invalid_access_error_test(mem):
     def invalid_func(mode, width, addr):
         raise ValueError("bonk!")
 
@@ -382,9 +392,7 @@ def machine68k_mem_invalid_access_error_test():
     mem.set_invalid_func(None)
 
 
-def machine68k_mem_special_rw_error_test():
-    mem = Memory(16)
-
+def machine68k_mem_special_rw_error_test(mem):
     def read(addr):
         raise ValueError("blonk!")
 

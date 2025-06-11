@@ -308,11 +308,12 @@ cdef class Memory:
   def r_block(self,uint addr,uint size):
     if (addr+size) > self.ram_bytes:
       self._raise_ram_error(addr, 'R', size)
-    res = bytearray(size)
+    cdef bytes res = PyBytes_FromStringAndSize(NULL, size)
     cdef unsigned char *ptr = res
     cdef const unsigned char *ram = self.ram_ptr + addr
     memcpy(ptr, ram, size)
     return res
+
   def w_block(self,uint addr, object data):
     cdef bytes bdata = bytes(data)
     cdef uint size = len(bdata)
