@@ -10,6 +10,7 @@ def setup_machine(request):
         m = request.getfixturevalue("remote_machine")
     else:
         m = Machine(CPUType.M68000, 1024)
+        assert repr(m) == "Machine(CPU(type=68000),Memory(ram_size_kib=1024))"
     mem = m.mem
     cpu = m.cpu
     traps = m.traps

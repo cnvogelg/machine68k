@@ -42,6 +42,7 @@ def machine68k_cpu_type_test(cpu_type):
     assert cpu.get_cpu_type() == cpu_type
     cpu_name = cpu_type_to_str(cpu_type)
     assert cpu.get_cpu_name() == cpu_name
+    assert repr(cpu) == f"CPU(type={cpu_name})"
 
 
 def machine68k_cpu_rw_reg_test(cpu):

@@ -174,6 +174,9 @@ cdef class CPU:
     self.set_reset_instr_callback(None)
     self.set_instr_hook_callback(None)
 
+  def __repr__(self):
+    return f"CPU(type={cpu_type_to_str(self.cpu_type)})"
+
   def get_cpu_type(self):
     return self.cpu_type
 

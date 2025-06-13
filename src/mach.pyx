@@ -31,3 +31,6 @@ cdef class Machine:
     self.cpu.cleanup()
     self.mem.cleanup()
     self.traps.cleanup()
+
+  def __repr__(self):
+    return f"Machine({self.cpu},{self.mem})"

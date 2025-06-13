@@ -71,6 +71,9 @@ cdef class Memory:
     self.special_write_funcs.clear()
     mem_free()
 
+  def __repr__(self):
+    return f"Memory(ram_size_kib={self.ram_size_kib})"
+
   def get_ram_size_kib(self):
     return self.ram_size_kib
 

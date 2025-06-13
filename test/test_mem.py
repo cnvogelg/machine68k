@@ -21,6 +21,7 @@ def mem(request):
 def machine68k_mem_size_test(mem):
     assert mem.get_ram_size_kib() == 16
     assert mem.get_ram_size_bytes() == 16 * 1024
+    assert repr(mem) == "Memory(ram_size_kib=16)"
 
 
 def machine68k_mem_rw_test(mem):
