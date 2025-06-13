@@ -34,7 +34,7 @@ cdef void special_write_func_wrapper(uint addr, uint value, void *ctx) noexcept:
   except:
     global run_exc
     run_exc = sys.exc_info()
-    cpu_end(CPU_END_MEM_READ_FUNC_ERROR)
+    cpu_end(CPU_END_MEM_WRITE_FUNC_ERROR)
 
 class MemoryError(Exception):
   def __init__(self, addr, op, size=None):
