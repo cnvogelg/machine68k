@@ -8,6 +8,7 @@ class Context:
         self.mem = self.m.mem
         self.cpu = self.m.cpu
         self.traps = self.m.traps
+        self.ended = False
 
         self.mem.w32(0, 0x800)  # init sp
         self.mem.w32(4, 0x400)  # init pc
@@ -18,7 +19,7 @@ class Context:
         self.cpu.pulse_reset()
 
         def end_func(opcode, pc):
-            self.cpu.end()
+            self.ended = True
 
         tid = self.traps.setup(end_func)
         self.opc_end = 0xA000 | tid
@@ -26,6 +27,9 @@ class Context:
 
     def cleanup(self):
         self.m.cleanup()
+
+    def has_ended(self):
+        return self.ended
 
 
 def write_traps(ctx, num, addr, opc):
@@ -51,11 +55,22 @@ def setup_run(ctx, total, func, **trap_args):
 
     def run():
         nonlocal count
+        was_trap = 0
         count = 0
+        cycles = 0
         ctx.cpu.pulse_reset()
-        er = ctx.cpu.execute(100_000)
+        ctx.ended = False
+
+        while not ctx.has_ended():
+            er = ctx.cpu.execute(100_000)
+            cycles += er.cycles
+            if er.was_trap:
+                was_trap += 1
+                ctx.traps.call()
+
+        assert was_trap == total + 1
         assert count == total
-        assert er.cycles == (total + 1) * 4
+        assert cycles == (total + 1) * 4
 
     return run
 
@@ -82,19 +97,11 @@ def machine68k_bench_dummy_traps_benchmark(benchmark):
     c.cleanup()
 
 
-def machine68k_bench_dummy_traps_defer_benchmark(benchmark):
+def machine68k_bench_dummy_traps_oldpc_benchmark(benchmark):
     c = Context()
     total = 10000
 
-    benchmark(setup_run(c, total, dummy_trap, defer=True))
-    c.cleanup()
-
-
-def machine68k_bench_dummy_traps_defer_oldpc_benchmark(benchmark):
-    c = Context()
-    total = 10000
-
-    benchmark(setup_run(c, total, dummy_trap, defer=True, old_pc=True))
+    benchmark(setup_run(c, total, dummy_trap, old_pc=True))
     c.cleanup()
 
 
@@ -106,17 +113,9 @@ def machine68k_bench_fibo_traps_benchmark(benchmark):
     c.cleanup()
 
 
-def machine68k_bench_fibo_traps_defer_benchmark(benchmark):
+def machine68k_bench_fibo_traps_oldpc_benchmark(benchmark):
     c = Context()
     total = 1000
 
-    benchmark(setup_run(c, total, fibo_trap, defer=True))
-    c.cleanup()
-
-
-def machine68k_bench_fibo_traps_defer_oldpc_benchmark(benchmark):
-    c = Context()
-    total = 1000
-
-    benchmark(setup_run(c, total, fibo_trap, defer=True, old_pc=True))
+    benchmark(setup_run(c, total, fibo_trap, old_pc=True))
     c.cleanup()

@@ -2,6 +2,8 @@ import pytest
 from machine68k import Machine, CPUType
 from opcodes import op_reset, op_jsr, op_rts, op_jmp
 
+ended = False
+
 
 @pytest.fixture(params=["local", "remote"])
 def setup_machine(request):
@@ -24,7 +26,8 @@ def setup_machine(request):
 
     # end run (user flag) on reset opcode
     def my_end(opcode, pc):
-        cpu.end()
+        global ended
+        ended = True
 
     tid = traps.setup(my_end)
     opc = 0xA000 | tid
@@ -41,9 +44,12 @@ def gen_code(mem, code, opc):
 def machine68k_machine_simple_run_test(setup_machine):
     m, mem, cpu, traps, code, opc = setup_machine
     mem.w16(code, opc)
+    global ended
+    ended = False
     er = cpu.execute(2000)
-    # after execute cycles_run() are cleared
-    assert cpu.cycles_run() == 0
+    assert er.was_trap
+    traps.call()
+    assert ended
     assert er.cycles == 4
 
 
@@ -161,17 +167,17 @@ def machine68k_machine_trap_test(setup_machine):
 
     def my_func(opcode, pc):
         # in a normal trap the current trap is not accounted, yet
-        assert cpu.cycles_run() == 0
         a.append(opcode)
         a.append(pc)
 
     tid = traps.setup(my_func)
     opc = 0xA000 | tid
     mem.w16(code, opc)
-    mem.w16(code + 2, opc_end)
     er = cpu.execute(2000)
+    assert er.was_trap
+    traps.call()
     assert a == [opc, code]
-    assert er.cycles == 8
+    assert er.cycles == 4
 
 
 def machine68k_machine_trap_raise_test(setup_machine):
@@ -183,145 +189,29 @@ def machine68k_machine_trap_raise_test(setup_machine):
     tid = traps.setup(my_func)
     opc = 0xA000 | tid
     mem.w16(code, opc)
-    mem.w16(code + 2, opc_end)
-    with pytest.raises(ValueError):
-        cpu.execute(2000)
-
-
-def machine68k_machine_trap_defer_test(setup_machine):
-    m, mem, cpu, traps, code, opc_end = setup_machine
-    a = []
-
-    def my_func(opcode, pc):
-        # in a deferred trap the trap is already accounted for
-        assert cpu.cycles_run() == 4
-        a.append(opcode)
-        a.append(pc)
-
-    tid = traps.setup(my_func, defer=True)
-    opc = 0xA000 | tid
-    mem.w16(code, opc)
-    mem.w16(code + 2, opc_end)
     er = cpu.execute(2000)
-    assert er.cycles == 8
-    assert a == [opc, code]
+    assert er.was_trap
+    with pytest.raises(ValueError):
+        traps.call()
 
 
-def machine68k_machine_trap_defer_oldpc_test(setup_machine):
+def machine68k_machine_trap_oldpc_test(setup_machine):
     m, mem, cpu, traps, code, opc_end = setup_machine
     a = []
 
     def my_func(opcode, pc):
-        # in a deferred trap the trap is already accounted for
-        assert cpu.cycles_run() == 4
         a.append(opcode)
         a.append(pc)
         assert cpu.r_pc() == pc
 
-    tid = traps.setup(my_func, defer=True, old_pc=True)
+    tid = traps.setup(my_func, old_pc=True)
     opc = 0xA000 | tid
     mem.w16(code, opc)
-    mem.w16(code + 2, opc_end)
     er = cpu.execute(2000)
-    assert er.cycles == 8
+    assert er.was_trap
+    assert er.cycles == 4
+    traps.call()
     assert a == [opc, code]
-
-
-def machine68k_machine_trap_defer_raise_test(setup_machine):
-    m, mem, cpu, traps, code, opc_end = setup_machine
-
-    def my_func(opcode, pc):
-        # in a deferred trap the trap is already accounted for
-        assert cpu.cycles_run() == 4
-        raise ValueError("foo")
-
-    tid = traps.setup(my_func, defer=True)
-    opc = 0xA000 | tid
-    mem.w16(code, opc)
-    mem.w16(code + 2, opc_end)
-    with pytest.raises(ValueError):
-        cpu.execute(2000)
-
-
-def machine68k_machine_trap_autorts_test(setup_machine):
-    m, mem, cpu, traps, code, opc_end = setup_machine
-    a = []
-
-    def my_func(opcode, pc):
-        assert cpu.cycles_run() == 20
-        a.append(opcode)
-        a.append(pc)
-
-    tid = traps.setup(my_func, auto_rts=True)
-    opc = 0xA000 | tid
-    mem.w16(code, op_jsr)
-    mem.w32(code + 2, code + 8)
-    mem.w16(code + 6, opc_end)
-    mem.w16(code + 8, opc)
-    er = cpu.execute(2000)
-    assert a == [opc, code + 8]
-    assert er.cycles == 28
-
-
-def machine68k_machine_trap_autorts_raise_test(setup_machine):
-    m, mem, cpu, traps, code, opc_end = setup_machine
-
-    def my_func(opcode, pc):
-        assert cpu.cycles_run() == 20
-        raise ValueError("foo")
-
-    tid = traps.setup(my_func, auto_rts=True)
-    opc = 0xA000 | tid
-    mem.w16(code, op_jsr)
-    mem.w32(code + 2, code + 8)
-    mem.w16(code + 6, opc_end)
-    mem.w16(code + 8, opc)
-    with pytest.raises(ValueError):
-        cpu.execute(2000)
-
-
-def machine68k_machine_trap_autorts_defer_test(setup_machine):
-    m, mem, cpu, traps, code, opc_end = setup_machine
-    a = []
-    instr = []
-
-    def my_func(opcode, pc):
-        assert cpu.cycles_run() == 24
-        a.append(opcode)
-        a.append(pc)
-
-    tid = traps.setup(my_func, auto_rts=True, defer=True)
-    opc = 0xA000 | tid
-    mem.w16(code, op_jsr)
-    mem.w32(code + 2, code + 8)
-    mem.w16(code + 6, opc_end)
-    mem.w16(code + 8, opc)
-
-    def out(pc):
-        instr.append(pc)
-
-    cpu.set_instr_hook_callback(out)
-    er = cpu.execute(2000)
-    assert instr == [code, code + 8, code + 6]
-    assert a == [opc, code + 8]
-    assert er.cycles == 28
-
-
-def machine68k_machine_trap_autorts_defer_raise_test(setup_machine):
-    m, mem, cpu, traps, code, opc_end = setup_machine
-
-    def my_func(opcode, pc):
-        assert cpu.cycles_run() == 24
-        raise ValueError("foo")
-
-    tid = traps.setup(my_func, auto_rts=True, defer=True)
-    opc = 0xA000 | tid
-    mem.w16(code, op_jsr)
-    mem.w32(code + 2, code + 8)
-    mem.w16(code + 6, opc_end)
-    mem.w16(code + 8, opc)
-    with pytest.raises(ValueError):
-        cpu.execute(2000)
 
 
 # ----- execute nesting -----
@@ -334,37 +224,14 @@ def machine68k_machine_recurse_test(setup_machine):
         pc = cpu.r_pc()
         cpu.w_pc(code + 10)
         er = cpu.execute(1000)
-        assert er.cycles == 10
+        assert er.cycles == 4
+        assert er.was_trap
+        traps.call()
         cpu.w_pc(pc)
 
     tid = traps.setup(my_func)
     opc = 0xA000 | tid
     mem.w16(code, opc)
-    mem.w16(code + 2, opc_end)
-    mem.w16(code + 10, opc_end)
-    # recursively called execute is not allowed in regular trap
-    with pytest.raises(RuntimeError):
-        cpu.execute(2000)
-
-
-def machine68k_machine_recurse_defer_test(setup_machine):
-    m, mem, cpu, traps, code, opc_end = setup_machine
-
-    def my_func(opcode, pc):
-        # these are the cycles of the main execute
-        assert cpu.cycles_run() == 4
-        pc = cpu.r_pc()
-        cpu.w_pc(code + 10)
-        er = cpu.execute(1000)
-        assert er.cycles == 4
-        # these are the cycles of the sub run
-        assert cpu.cycles_run() == 4
-        cpu.w_pc(pc)
-
-    tid = traps.setup(my_func, defer=True)
-    opc = 0xA000 | tid
-    mem.w16(code, opc)
-    mem.w16(code + 2, opc_end)
     mem.w16(code + 10, opc_end)
 
     instr = []
@@ -375,8 +242,10 @@ def machine68k_machine_recurse_defer_test(setup_machine):
     cpu.set_instr_hook_callback(out)
 
     er = cpu.execute(2000)
-    assert er.cycles == 8
-    assert instr == [code, code + 10, code + 2]
+    assert er.was_trap
+    assert er.cycles == 4
+    traps.call()
+    assert instr == [code, code + 10]
 
 
 def machine68k_machine_recurse_twice_test(setup_machine):
@@ -384,34 +253,27 @@ def machine68k_machine_recurse_twice_test(setup_machine):
     a = []
 
     def my_func(opcode, pc):
-        # cycles of code trap
-        assert cpu.cycles_run() == 4
         pc = cpu.r_pc()
         cpu.w_pc(code + 10)
         er = cpu.execute(1000)
         cpu.w_pc(pc)
-        # sub run cycles: opc2 + opc_end
-        assert er.cycles == 8
-        # here we get the cycles of the main run: opc (deferred)
-        assert cpu.cycles_run() == 4
+        assert er.cycles == 4
+        assert er.was_trap
+        traps.call()
 
     def my_func2(opcode, pc):
-        # cycles of code + 10 trap
-        assert cpu.cycles_run() == 4
         a.append(opcode)
         a.append(pc)
 
-    tid = traps.setup(my_func, defer=True)
+    tid = traps.setup(my_func)
     opc = 0xA000 | tid
 
-    tid2 = traps.setup(my_func2, defer=True)
+    tid2 = traps.setup(my_func2)
     opc2 = 0xA000 | tid2
 
     mem.w16(code, opc)
-    mem.w16(code + 2, opc_end)
 
     mem.w16(code + 10, opc2)
-    mem.w16(code + 12, opc_end)
 
     instr = []
 
@@ -421,9 +283,10 @@ def machine68k_machine_recurse_twice_test(setup_machine):
     cpu.set_instr_hook_callback(out)
 
     er = cpu.execute(2000)
-    # main run cycles: opc + opc_end
-    assert er.cycles == 8
-    assert instr == [code, code + 10, code + 12, code + 2]
+    assert er.cycles == 4
+    assert er.was_trap
+    traps.call()
+    assert instr == [code, code + 10]
     assert a == [opc2, code + 10]
 
 
@@ -433,23 +296,24 @@ def machine68k_machine_recurse_twice_raise_test(setup_machine):
     def my_func(opcode, pc):
         pc = cpu.r_pc()
         cpu.w_pc(code + 10)
-        cpu.execute(1000)
+        er = cpu.execute(1000)
+        assert er.was_trap
+        # this will raise the value error
+        traps.call()
         cpu.w_pc(pc)
 
     def my_func2(opcode, pc):
         raise ValueError("foo")
 
-    tid = traps.setup(my_func, defer=True)
+    tid = traps.setup(my_func)
     opc = 0xA000 | tid
 
-    tid2 = traps.setup(my_func2, defer=True)
+    tid2 = traps.setup(my_func2)
     opc2 = 0xA000 | tid2
 
     mem.w16(code, opc)
-    mem.w16(code + 2, opc_end)
 
     mem.w16(code + 10, opc2)
-    mem.w16(code + 12, opc_end)
 
     instr = []
 
@@ -458,6 +322,8 @@ def machine68k_machine_recurse_twice_raise_test(setup_machine):
 
     cpu.set_instr_hook_callback(out)
 
+    er = cpu.execute(2000)
+    assert er.was_trap
     with pytest.raises(ValueError):
-        cpu.execute(2000)
+        traps.call()
     assert instr == [code, code + 10]

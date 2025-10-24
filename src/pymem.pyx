@@ -6,7 +6,7 @@ cdef void trace_func_wrapper(int mode, int width, uint addr, uint val, void *ctx
   except:
     global run_exc
     run_exc = sys.exc_info()
-    cpu_end(CPU_END_MEM_TRACE_FUNC_ERROR)
+    cpu_end_execute(CPU_END_ERROR)
 
 cdef void invalid_func_wrapper(int mode, int width, uint addr, void *ctx) noexcept:
   cdef object py_func = <object>ctx
@@ -15,7 +15,7 @@ cdef void invalid_func_wrapper(int mode, int width, uint addr, void *ctx) noexce
   except:
     global run_exc
     run_exc = sys.exc_info()
-    cpu_end(CPU_END_MEM_INVALID_FUNC_ERROR)
+    cpu_end_execute(CPU_END_ERROR)
 
 cdef uint special_read_func_wrapper(uint addr, void *ctx) noexcept:
   cdef object py_func = <object>ctx
@@ -24,7 +24,7 @@ cdef uint special_read_func_wrapper(uint addr, void *ctx) noexcept:
   except:
     global run_exc
     run_exc = sys.exc_info()
-    cpu_end(CPU_END_MEM_READ_FUNC_ERROR)
+    cpu_end_execute(CPU_END_ERROR)
     return 0
 
 cdef void special_write_func_wrapper(uint addr, uint value, void *ctx) noexcept:
@@ -34,7 +34,7 @@ cdef void special_write_func_wrapper(uint addr, uint value, void *ctx) noexcept:
   except:
     global run_exc
     run_exc = sys.exc_info()
-    cpu_end(CPU_END_MEM_WRITE_FUNC_ERROR)
+    cpu_end_execute(CPU_END_ERROR)
 
 class MemoryError(Exception):
   def __init__(self, addr, op, size=None):

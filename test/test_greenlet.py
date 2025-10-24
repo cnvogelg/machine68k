@@ -4,6 +4,8 @@ from opcodes import op_reset, op_jsr, op_rts, op_jmp
 
 greenlet = pytest.importorskip("greenlet")
 
+ended = False
+
 
 def setup_machine():
     m = Machine(CPUType.M68000, 1025)
@@ -20,7 +22,8 @@ def setup_machine():
 
     # end run (user flag) on reset opcode
     def my_end(opcode, pc):
-        cpu.end()
+        global ended
+        ended = True
 
     tid = traps.setup(my_end)
     opc = 0xA000 | tid
@@ -51,18 +54,20 @@ def machine68k_switch_run_test():
         glet1.switch()
         cpu.set_cpu_context(ctx)
 
-    # we need deferred traps here otherwise we would enter the
-    # execute() "recursively"
-    tid1 = traps.setup(switch1, defer=True)
+    tid1 = traps.setup(switch1)
     opc1 = 0xA000 | tid1
 
-    tid2 = traps.setup(switch2, defer=True)
+    tid2 = traps.setup(switch2)
     opc2 = 0xA000 | tid2
 
     def run1():
         cpu.w_pc(code)
         cpu.w_sp(0x700)
-        er = cpu.execute(2000)
+        global ended
+        while not ended:
+            er = cpu.execute(2000)
+            if er.was_trap:
+                traps.call()
         run1_result.append(er)
         # final switch to end run2
         glet2.switch()
@@ -70,7 +75,11 @@ def machine68k_switch_run_test():
     def run2():
         cpu.w_pc(code + 20)
         cpu.w_sp(0x600)
-        er = cpu.execute(2000)
+        global ended
+        while not ended:
+            er = cpu.execute(2000)
+            if er.was_trap:
+                traps.call()
         run2_result.append(er)
 
     # code1

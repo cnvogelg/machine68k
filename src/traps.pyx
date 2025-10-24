@@ -1,10 +1,7 @@
 # traps.h
 cdef extern from "traps.h":
   int TRAP_FLAG_DEFAULT
-  int TRAP_FLAG_AUTO_RTS
-  int TRAP_FLAG_ONE_SHOT
-  int TRAP_FLAG_DEFER
-  int TRAP_FLAG_DEFER_OLD_PC
+  int TRAP_FLAG_OLD_PC
 
   int TRAP_RESULT_OK
   int TRAP_RESULT_ERROR
@@ -17,4 +14,4 @@ cdef extern from "traps.h":
 
   # for testing
   int trap_aline(uint opcode, uint pc)
-  int trap_defer_call()
+  int trap_call()

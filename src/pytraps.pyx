@@ -19,21 +19,20 @@ cdef class Traps:
   def cleanup(self):
     pass
 
-  def setup(self, py_func, auto_rts=False, one_shot=False, defer=False, old_pc=False):
+  def __repr__(self):
+    return f"Traps(num={len(self.func_map)})"
+
+  def setup(self, py_func, old_pc=False):
     cdef int flags
     flags = TRAP_FLAG_DEFAULT
-    if auto_rts:
-      flags |= TRAP_FLAG_AUTO_RTS
-    if one_shot:
-      flags |= TRAP_FLAG_ONE_SHOT
-    if defer:
-      flags |= TRAP_FLAG_DEFER
-      if old_pc:
-        flags |= TRAP_FLAG_DEFER_OLD_PC
+    if old_pc:
+      flags |= TRAP_FLAG_OLD_PC
+
     tid = trap_setup(trap_wrapper, flags, <void *>py_func)
     if tid != -1:
       # keep function reference around
       self.func_map[tid] = py_func
+
     return tid
 
   def free(self, tid):
@@ -46,9 +45,9 @@ cdef class Traps:
     raise_run_exc()
     return result
 
-  def defer_call(self):
+  def call(self):
     clear_run_exc()
-    cdef int result = trap_defer_call()
+    cdef int result = trap_call()
     if result != TRAP_RESULT_OK:
       raise_run_exc()
 

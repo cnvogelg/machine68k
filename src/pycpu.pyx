@@ -98,7 +98,7 @@ cdef void pc_changed_func_wrapper(unsigned int new_pc) noexcept:
   except:
     global run_exc
     run_exc = sys.exc_info()
-    cpu_end(CPU_END_PC_CHANGED_FUNC_ERROR)
+    cpu_end_execute(CPU_END_ERROR)
 
 cdef object reset_instr_func
 cdef void reset_instr_func_wrapper() noexcept:
@@ -107,7 +107,7 @@ cdef void reset_instr_func_wrapper() noexcept:
   except:
     global run_exc
     run_exc = sys.exc_info()
-    cpu_end(CPU_END_RESET_INSTR_FUNC_ERROR)
+    cpu_end_execute(CPU_END_ERROR)
 
 cdef object instr_hook_func
 cdef void instr_hook_func_wrapper(unsigned int pc) noexcept:
@@ -116,7 +116,7 @@ cdef void instr_hook_func_wrapper(unsigned int pc) noexcept:
   except:
     global run_exc
     run_exc = sys.exc_info()
-    cpu_end(CPU_END_INSTR_HOOK_FUNC_ERROR)
+    cpu_end_execute(CPU_END_ERROR)
 
 # public CPUContext
 cdef class CPUContext:
@@ -157,16 +157,14 @@ cdef class CPUContext:
 @dataclasses.dataclass
 cdef class ExecutionResult:
   cdef readonly int cycles
-  cdef readonly bint user_end
+  cdef readonly bint was_trap
 
 # public CPU class
 cdef class CPU:
   cdef readonly CPUType cpu_type
 
   def __cinit__(self, CPUType cpu_type):
-    m68k_set_cpu_type(<unsigned int>cpu_type)
-    m68k_init()
-    cpu_init()
+    cpu_init(<unsigned int>cpu_type)
     self.cpu_type = cpu_type
 
   def cleanup(self):
@@ -313,25 +311,14 @@ cdef class CPU:
     cdef int total_cycles
     cdef int flags = cpu_execute(num_cycles, &total_cycles)
 
-    # recursion?
-    if flags == CPU_END_RECURSE_EXECUTE:
-      raise RuntimeError("execute() called recursively")
-    elif flags == CPU_END_NESTING_TOO_DEEP:
-      raise RuntimeError("execute() nesting too deep")
-    # if execution was ended by an error then we assume run_exc was set
-    # and we will raise now the error in this function
-    elif (flags & CPU_END_ERROR_MASK) != 0:
+    # an error will raise an excpetion
+    if (flags & CPU_END_ERROR) != 0:
       raise_run_exc()
-    # flag user end
-    cdef bint user_end = (flags & CPU_END_USER) != 0
 
-    return ExecutionResult(total_cycles, user_end)
+    # has trap?
+    cdef bint was_trap = (flags & CPU_END_TRAP) != 0
 
-  def end(self):
-    cpu_end(CPU_END_USER)
-
-  def cycles_run(self):
-    return cpu_cycles_run()
+    return ExecutionResult(total_cycles, was_trap)
 
   # callbacks
 

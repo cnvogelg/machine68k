@@ -14,8 +14,6 @@
 #define NUM_TRAPS  0x1000
 #define TRAP_MASK  0x0fff
 
-
-
 struct entry {
   trap_func_t trap;
   struct entry *next;
@@ -48,42 +46,24 @@ int trap_aline(uint opcode, uint pc)
     return M68K_ALINE_EXCEPT;
   }
 
-  /* a one shot trap is removed before it is triggered
-  ** otherwise, trap-functions used to capture "end-of-call"s
-  ** of shell processes would never be released.
-  */
-  if(flags & TRAP_FLAG_ONE_SHOT) {
-    trap_free(off);
-  }
-
-  /* a deferred trap is not execute in the m68k_execute() loop.
+  /* a trap is not executed in the m68k_execute() loop.
      it is stored, the execution timeslice is ended and afterwards
      the trap will be executed. It is useful for nesting m68k runs
      without recursion of m68k_execute().
   */
-  if(flags & TRAP_FLAG_DEFER) {
-    /* keep call */
-    defer_call.opcode = opcode;
-    defer_call.pc = pc;
-    defer_call.entry = &traps[off];
-    /* end slice so we can call the trap directly after execute() */
-    cpu_end(CPU_END_TRAP_DEFER);
-  } else {
-    /* directly call trap func */
-    int result = func(opcode, pc, data);
-    if(result != TRAP_RESULT_OK) {
-        cpu_end(CPU_END_TRAP_ERROR);
-    }
-  }
 
-  if(flags & TRAP_FLAG_AUTO_RTS) {
-    return M68K_ALINE_RTS;
-  } else {
-    return M68K_ALINE_NONE;
-  }
+  /* keep call */
+  defer_call.opcode = opcode;
+  defer_call.pc = pc;
+  defer_call.entry = &traps[off];
+
+  /* end slice so we can call the trap directly after execute() */
+  cpu_end_execute(CPU_END_TRAP);
+
+  return M68K_ALINE_NONE;
 }
 
-int trap_defer_call(void)
+int trap_call(void)
 {
   call_t *call = &defer_call;
   entry_t *entry = call->entry;
@@ -91,7 +71,7 @@ int trap_defer_call(void)
   if(entry != NULL) {
     int result;
 
-    if(entry->flags & TRAP_FLAG_DEFER_OLD_PC) {
+    if(entry->flags & TRAP_FLAG_OLD_PC) {
         /* set pc to trap value */
         uint cur_pc = m68k_get_reg(NULL, M68K_REG_PC);
         m68k_set_reg(M68K_REG_PC, call->pc);
