@@ -14,25 +14,29 @@
 #define TRAP_FLAG_DEFAULT       0
 #define TRAP_FLAG_OLD_PC        1
 
-/* Trap Result */
-#define TRAP_RESULT_OK       0
-#define TRAP_RESULT_ERROR    1
-
 /* ------ Types ----- */
 #ifndef UINT_TYPE
 #define UINT_TYPE
 typedef unsigned int uint;
 #endif
 
-typedef int (*trap_func_t)(uint opcode, uint pc, void *data);
+struct trap_info {
+  unsigned int opcode;
+  unsigned int pc;
+  unsigned int offset;
+  void *data;
+  int flags;
+};
+typedef struct trap_info trap_info_t;
 
 /* ----- API ----- */
 extern void trap_init(void);
-extern int trap_aline(uint opcode, uint pc);
 
-extern int  trap_setup(trap_func_t func, int flags, void *data);
+extern int  trap_alloc(int flags, void *data);
 extern void trap_free(int id);
+extern void *trap_get_data(int id);
 
-extern int trap_call(void);
+extern int trap_trigger(uint opcode, uint pc);
+extern trap_info_t *trap_get_info(void);
 
 #endif

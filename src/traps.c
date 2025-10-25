@@ -15,33 +15,24 @@
 #define TRAP_MASK  0x0fff
 
 struct entry {
-  trap_func_t trap;
   struct entry *next;
   void *data;
   int flags;
 };
 typedef struct entry entry_t;
 
-struct call {
-  uint opcode;
-  uint pc;
-  entry_t *entry;
-};
-typedef struct call call_t;
-
 static entry_t traps[NUM_TRAPS];
 static entry_t *first_free;
-static call_t defer_call;
+static trap_info_t info;
 
-int trap_aline(uint opcode, uint pc)
+int trap_trigger(uint opcode, uint pc)
 {
   uint off = opcode & TRAP_MASK;
-  trap_func_t func = traps[off].trap;
   void *data = traps[off].data;
   int flags = traps[off].flags;
 
   /* unbound trap? */
-  if(func == NULL) {
+  if(data == NULL) {
     /* regular m68k ALINE exception */
     return M68K_ALINE_EXCEPT;
   }
@@ -53,9 +44,11 @@ int trap_aline(uint opcode, uint pc)
   */
 
   /* keep call */
-  defer_call.opcode = opcode;
-  defer_call.pc = pc;
-  defer_call.entry = &traps[off];
+  info.opcode = opcode;
+  info.pc = pc;
+  info.offset = off;
+  info.data = data;
+  info.flags = flags;
 
   /* end slice so we can call the trap directly after execute() */
   cpu_end_execute(CPU_END_TRAP);
@@ -63,36 +56,9 @@ int trap_aline(uint opcode, uint pc)
   return M68K_ALINE_NONE;
 }
 
-int trap_call(void)
+trap_info_t *trap_get_info(void)
 {
-  call_t *call = &defer_call;
-  entry_t *entry = call->entry;
-
-  if(entry != NULL) {
-    int result;
-
-    if(entry->flags & TRAP_FLAG_OLD_PC) {
-        /* set pc to trap value */
-        uint cur_pc = m68k_get_reg(NULL, M68K_REG_PC);
-        m68k_set_reg(M68K_REG_PC, call->pc);
-
-        /* perform call */
-        result = entry->trap(call->opcode, call->pc, entry->data);
-
-        /* restore pc */
-        m68k_set_reg(M68K_REG_PC, cur_pc);
-    } else {
-        /* perform call */
-        result = entry->trap(call->opcode, call->pc, entry->data);
-    }
-
-    /* clear defer call */
-    call->entry = NULL;
-
-    return result;
-  } else {
-    return TRAP_RESULT_ERROR;
-  }
+  return &info;
 }
 
 void trap_init(void)
@@ -102,21 +68,28 @@ void trap_init(void)
   /* setup free list */
   first_free = &traps[0];
   for(i=0;i<(NUM_TRAPS-1);i++) {
-    traps[i].trap = NULL;
     traps[i].next = &traps[i+1];
     traps[i].flags = 0;
     traps[i].data = NULL;
   }
-  traps[NUM_TRAPS-1].trap = NULL;
   traps[NUM_TRAPS-1].next = NULL;
   traps[NUM_TRAPS-1].flags = 0;
   traps[NUM_TRAPS-1].data = NULL;
 
   /* setup my trap handler */
-  m68k_set_aline_hook_callback(trap_aline);
+  m68k_set_aline_hook_callback(trap_trigger);
 }
 
-int trap_setup(trap_func_t func, int flags, void *data)
+void *trap_get_data(int id)
+{
+  if((id >= 0) && (id < NUM_TRAPS)) {
+    return traps[id].data;
+  } else {
+    return NULL;
+  }
+}
+
+int trap_alloc(int flags, void *data)
 {
   int off;
 
@@ -131,7 +104,6 @@ int trap_setup(trap_func_t func, int flags, void *data)
   first_free = traps[off].next;
 
   /* store trap function */
-  traps[off].trap = func;
   traps[off].data = data;
   traps[off].flags = flags;
 
@@ -142,7 +114,6 @@ void trap_free(int id)
 {
   /* insert trap into free list */
   traps[id].next = first_free;
-  traps[id].trap = NULL;
   traps[id].flags = 0;
   traps[id].data = NULL;
   first_free = &traps[id];

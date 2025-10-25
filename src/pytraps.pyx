@@ -1,13 +1,10 @@
-cdef int trap_wrapper(uint opcode, uint pc, void *data) noexcept:
-  global trap_exc
-  cdef object py_func = <object>data
-  try:
-    py_func(opcode, pc)
-    return TRAP_RESULT_OK
-  except:
-    global run_exc
-    run_exc = sys.exc_info()
-    return TRAP_RESULT_ERROR
+@dataclasses.dataclass
+cdef class TrapInfo:
+  cdef readonly unsigned int opcode
+  cdef readonly unsigned int pc
+  cdef readonly unsigned int offset
+  cdef readonly object func
+  cdef readonly bint old_pc
 
 cdef class Traps:
   cdef dict func_map
@@ -22,13 +19,13 @@ cdef class Traps:
   def __repr__(self):
     return f"Traps(num={len(self.func_map)})"
 
-  def setup(self, py_func, old_pc=False):
+  def alloc(self, py_func, old_pc=False):
     cdef int flags
     flags = TRAP_FLAG_DEFAULT
     if old_pc:
       flags |= TRAP_FLAG_OLD_PC
 
-    tid = trap_setup(trap_wrapper, flags, <void *>py_func)
+    tid = trap_alloc(flags, <void *>py_func)
     if tid != -1:
       # keep function reference around
       self.func_map[tid] = py_func
@@ -39,18 +36,42 @@ cdef class Traps:
     trap_free(tid)
     del self.func_map[tid]
 
+  def get_func(self, tid):
+    cdef void *data = trap_get_data(tid)
+    if data == NULL:
+      return None
+    else:
+      return <object>data
+
   def trigger(self, uint opcode, uint pc):
-    clear_run_exc()
-    cdef int result = trap_aline(opcode, pc)
-    raise_run_exc()
+    cdef int result = trap_trigger(opcode, pc)
     return result
 
+  def get_info(self):
+    cdef trap_info_t *ti = trap_get_info()
+    cdef object func = <object>ti.data
+    cdef bint old_pc = (ti.flags & TRAP_FLAG_OLD_PC) != 0
+    return TrapInfo(
+      ti.opcode,
+      ti.pc,
+      ti.offset,
+      func,
+      old_pc
+    )
+  
   def call(self):
-    clear_run_exc()
-    cdef int result = trap_call()
-    if result != TRAP_RESULT_OK:
-      raise_run_exc()
+    cdef unsigned int cur_pc 
+    cdef trap_info_t *ti = trap_get_info()
+    cdef object func = <object>ti.data
+    if not func:
+      raise RuntimeError("Invalid trap!")
+    
+    if (ti.flags & TRAP_FLAG_OLD_PC) != 0:
+      cur_pc = m68k_get_reg(NULL, M68K_REG_PC);
+      m68k_set_reg(M68K_REG_PC, ti.pc);
+      result = func(ti.opcode, ti.pc)
+      m68k_set_reg(M68K_REG_PC, cur_pc);
+    else:
+      result = func(ti.opcode, ti.pc)
 
-  def get_func(self, tid):
-    if tid in self.func_map:
-      return self.func_map[tid]
+    return result

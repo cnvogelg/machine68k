@@ -1,5 +1,4 @@
 from machine68k import CPUType, Machine
-from opcodes import op_reset
 
 
 class Context:
@@ -18,14 +17,17 @@ class Context:
         # trigger reset (read sp and init pc)
         self.cpu.pulse_reset()
 
+        self.ended = False
+
         def end_func(opcode, pc):
             self.ended = True
 
-        tid = self.traps.setup(end_func)
-        self.opc_end = 0xA000 | tid
+        self.tid = self.traps.alloc(end_func)
+        self.opc_end = 0xA000 | self.tid
         self.code = 0x400
 
     def cleanup(self):
+        self.traps.free(self.tid)
         self.m.cleanup()
 
     def has_ended(self):
@@ -48,7 +50,7 @@ def setup_run(ctx, total, func, **trap_args):
         count += 1
         func(opcode, pc)
 
-    tid = ctx.traps.setup(wrap, **trap_args)
+    tid = ctx.traps.alloc(wrap, **trap_args)
     opc = 0xA000 | tid
 
     write_traps(ctx, total, ctx.code, opc)

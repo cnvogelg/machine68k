@@ -29,7 +29,7 @@ def setup_machine(request):
         global ended
         ended = True
 
-    tid = traps.setup(my_end)
+    tid = traps.alloc(my_end)
     opc = 0xA000 | tid
     return m, mem, cpu, traps, 0x400, opc
 
@@ -170,7 +170,7 @@ def machine68k_machine_trap_test(setup_machine):
         a.append(opcode)
         a.append(pc)
 
-    tid = traps.setup(my_func)
+    tid = traps.alloc(my_func)
     opc = 0xA000 | tid
     mem.w16(code, opc)
     er = cpu.execute(2000)
@@ -186,7 +186,7 @@ def machine68k_machine_trap_raise_test(setup_machine):
     def my_func(opcode, pc):
         raise ValueError("foo")
 
-    tid = traps.setup(my_func)
+    tid = traps.alloc(my_func)
     opc = 0xA000 | tid
     mem.w16(code, opc)
     er = cpu.execute(2000)
@@ -204,7 +204,7 @@ def machine68k_machine_trap_oldpc_test(setup_machine):
         a.append(pc)
         assert cpu.r_pc() == pc
 
-    tid = traps.setup(my_func, old_pc=True)
+    tid = traps.alloc(my_func, old_pc=True)
     opc = 0xA000 | tid
     mem.w16(code, opc)
     er = cpu.execute(2000)
@@ -229,7 +229,7 @@ def machine68k_machine_recurse_test(setup_machine):
         traps.call()
         cpu.w_pc(pc)
 
-    tid = traps.setup(my_func)
+    tid = traps.alloc(my_func)
     opc = 0xA000 | tid
     mem.w16(code, opc)
     mem.w16(code + 10, opc_end)
@@ -265,10 +265,10 @@ def machine68k_machine_recurse_twice_test(setup_machine):
         a.append(opcode)
         a.append(pc)
 
-    tid = traps.setup(my_func)
+    tid = traps.alloc(my_func)
     opc = 0xA000 | tid
 
-    tid2 = traps.setup(my_func2)
+    tid2 = traps.alloc(my_func2)
     opc2 = 0xA000 | tid2
 
     mem.w16(code, opc)
@@ -305,10 +305,10 @@ def machine68k_machine_recurse_twice_raise_test(setup_machine):
     def my_func2(opcode, pc):
         raise ValueError("foo")
 
-    tid = traps.setup(my_func)
+    tid = traps.alloc(my_func)
     opc = 0xA000 | tid
 
-    tid2 = traps.setup(my_func2)
+    tid2 = traps.alloc(my_func2)
     opc2 = 0xA000 | tid2
 
     mem.w16(code, opc)

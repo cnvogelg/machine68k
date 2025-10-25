@@ -3,15 +3,18 @@ cdef extern from "traps.h":
   int TRAP_FLAG_DEFAULT
   int TRAP_FLAG_OLD_PC
 
-  int TRAP_RESULT_OK
-  int TRAP_RESULT_ERROR
-
-  ctypedef int (*trap_func_t)(uint opcode, uint pc, void *data)
+  ctypedef struct trap_info_t:
+    unsigned int opcode
+    unsigned int pc
+    unsigned int offset
+    void *data
+    int flags
 
   void trap_init()
-  int  trap_setup(trap_func_t func, int flags, void *data)
+  int  trap_alloc(int flags, void *data)
   void trap_free(int id)
+  void *trap_get_data(int id)
 
   # for testing
-  int trap_aline(uint opcode, uint pc)
-  int trap_call()
+  int trap_trigger(uint opcode, uint pc)
+  trap_info_t *trap_get_info()

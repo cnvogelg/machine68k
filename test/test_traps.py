@@ -24,14 +24,26 @@ def machine68k_traps_trigger_test(traps):
     def my_func(opcode, pc):
         a.append(opcode)
         a.append(pc)
+        return "hello"
 
-    tid = traps.setup(my_func)
+    # alloc trap
+    tid = traps.alloc(my_func)
     assert tid >= 0
+    # check func
+    assert traps.get_func(tid) is my_func
+    assert traps.get_func(tid + 1) is None
     # simulate trigger by CPU execution
     traps.trigger(tid, 23)
-    # defer the call
-    traps.call()
+    # check info
+    info = traps.get_info()
+    assert info.pc == 23
+    assert info.offset == tid
+    assert info.func is my_func
+    # trigger the call
+    result = traps.call()
+    assert result == "hello"
     assert a == [tid, 23]
+    # release trap
     traps.free(tid)
 
 
@@ -42,9 +54,46 @@ def machine68k_traps_raise_test(traps):
     def my_func(opcode, pc):
         raise ValueError("bla")
 
-    tid = traps.setup(my_func)
+    # alloc trap
+    tid = traps.alloc(my_func)
     assert tid >= 0
+    # simulate trigger
     traps.trigger(tid, 23)
+    # check info
+    info = traps.get_info()
+    assert info.pc == 23
+    assert info.offset == tid
+    assert info.func is my_func
+    # trigger call and expect exception
     with pytest.raises(ValueError):
         traps.call()
+    # free trap
+    traps.free(tid)
+
+
+def machine68k_traps_return_test(traps):
+    a = []
+    b = []
+
+    class Mine:
+        pass
+
+    mine = Mine()
+
+    def my_func(opcode, pc):
+        return mine
+
+    # alloc trap
+    tid = traps.alloc(my_func)
+    assert tid >= 0
+    # simulate trap trigger
+    traps.trigger(tid, 23)
+    # check info
+    info = traps.get_info()
+    assert info.pc == 23
+    assert info.offset == tid
+    assert info.func is my_func
+    # trigger call and expect return value
+    assert traps.call() is mine
+    # free trap
     traps.free(tid)

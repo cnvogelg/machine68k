@@ -25,7 +25,7 @@ def setup_machine():
         global ended
         ended = True
 
-    tid = traps.setup(my_end)
+    tid = traps.alloc(my_end)
     opc = 0xA000 | tid
     return m, mem, cpu, traps, 0x400, opc
 
@@ -54,10 +54,10 @@ def machine68k_switch_run_test():
         glet1.switch()
         cpu.set_cpu_context(ctx)
 
-    tid1 = traps.setup(switch1)
+    tid1 = traps.alloc(switch1)
     opc1 = 0xA000 | tid1
 
-    tid2 = traps.setup(switch2)
+    tid2 = traps.alloc(switch2)
     opc2 = 0xA000 | tid2
 
     def run1():
