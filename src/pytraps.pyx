@@ -59,7 +59,7 @@ cdef class Traps:
       old_pc
     )
   
-  def call(self):
+  cpdef call(self):
     cdef unsigned int cur_pc 
     cdef trap_info_t *ti = trap_get_info()
     cdef object func = <object>ti.data
