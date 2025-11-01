@@ -18,9 +18,13 @@ include "pymem.pyx"
 include "pytraps.pyx"
 
 @dataclasses.dataclass
+cdef class MachineEndExecution:
+  cdef readonly str desc
+
+@dataclasses.dataclass
 cdef class MachineExecutionResult:
   cdef readonly int cycles
-  cdef readonly bint exit
+  cdef readonly MachineEndExecution trap_res
 
 cdef class Machine:
   cdef readonly CPU cpu
@@ -42,28 +46,11 @@ cdef class Machine:
   def __repr__(self):
     return f"Machine({self.cpu},{self.mem})"
 
-  def init_execute(self, uint exit_addr):
-    def exit_handler(opcode, pc):
-      # self is our sentinel for the exit trap
-      return self
-    self._exit_addr = exit_addr
-    self._exit_trap = self.traps.alloc(exit_handler)
-    # place trap 
-    opc = 0xa000 | self._exit_trap
-    self.mem.w16(self._exit_addr, opc)
-  
-  def exit_execute(self):
-    self.traps.free(self._exit_trap)
-
-  def prepare_execute(self, uint pc, uint sp):
-    self.cpu.w_pc(pc)
-    # place end trap on stack
-    sp -= 4
-    self.mem.w32(sp, self._exit_addr)
-    self.cpu.w_sp(sp)
+  def create_trap_res(self, str desc):
+    return MachineEndExecution(desc)
 
   def execute(self, int max_cycles=1000):
-    cdef bint exit = False
+    cdef MachineEndExecution exit = None
     cdef int run_cycles = 0
     cdef int flags
 
@@ -79,7 +66,7 @@ cdef class Machine:
     if (flags & CPU_END_TRAP) != 0:
       res = self.traps.call()
       # exit?
-      if res is self:
-          exit = True
+      if type(res) is MachineEndExecution:
+          exit = res
  
     return MachineExecutionResult(run_cycles, exit)

@@ -52,7 +52,6 @@ cdef class Traps:
     )
   
   cpdef call(self):
-    cdef unsigned int cur_pc 
     cdef trap_info_t *ti = trap_get_info()
     cdef object func = <object>ti.data
     if not func:
