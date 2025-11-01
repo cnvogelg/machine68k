@@ -42,7 +42,7 @@ cdef class Machine:
   def __repr__(self):
     return f"Machine({self.cpu},{self.mem})"
 
-  def init_execute(self, exit_addr):
+  def init_execute(self, uint exit_addr):
     def exit_handler(opcode, pc):
       # self is our sentinel for the exit trap
       return self
@@ -55,18 +55,21 @@ cdef class Machine:
   def exit_execute(self):
     self.traps.free(self._exit_trap)
 
-  def prepare_execute(self, pc, sp):
+  def prepare_execute(self, uint pc, uint sp):
     self.cpu.w_pc(pc)
     # place end trap on stack
     sp -= 4
     self.mem.w32(sp, self._exit_addr)
     self.cpu.w_sp(sp)
 
-  def execute(self, max_cycles=1000):
-    clear_run_exc()
+  def execute(self, int max_cycles=1000):
     cdef bint exit = False
-    cdef int total_cycles = 0
-    cdef int flags = cpu_execute(max_cycles, &total_cycles)
+    cdef int run_cycles = 0
+    cdef int flags
+
+    clear_run_exc()
+
+    flags = cpu_execute(max_cycles, &run_cycles)
 
     # an error will raise an excpetion
     if (flags & CPU_END_ERROR) != 0:
@@ -79,4 +82,4 @@ cdef class Machine:
       if res is self:
           exit = True
  
-    return MachineExecutionResult(total_cycles, exit)
+    return MachineExecutionResult(run_cycles, exit)

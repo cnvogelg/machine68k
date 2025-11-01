@@ -1,17 +1,13 @@
 # traps.h
 cdef extern from "traps.h":
-  int TRAP_FLAG_DEFAULT
-  int TRAP_FLAG_OLD_PC
-
   ctypedef struct trap_info_t:
     unsigned int opcode
     unsigned int pc
     unsigned int offset
     void *data
-    int flags
 
   void trap_init()
-  int  trap_alloc(int flags, void *data)
+  int  trap_alloc(void *data)
   void trap_free(int id)
   void *trap_get_data(int id)
 

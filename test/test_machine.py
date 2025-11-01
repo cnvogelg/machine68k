@@ -195,25 +195,6 @@ def machine68k_machine_trap_raise_test(setup_machine):
         traps.call()
 
 
-def machine68k_machine_trap_oldpc_test(setup_machine):
-    m, mem, cpu, traps, code, opc_end = setup_machine
-    a = []
-
-    def my_func(opcode, pc):
-        a.append(opcode)
-        a.append(pc)
-        assert cpu.r_pc() == pc
-
-    tid = traps.alloc(my_func, old_pc=True)
-    opc = 0xA000 | tid
-    mem.w16(code, opc)
-    er = cpu.execute(2000)
-    assert er.was_trap
-    assert er.cycles == 4
-    traps.call()
-    assert a == [opc, code]
-
-
 # ----- execute nesting -----
 
 

@@ -17,7 +17,6 @@
 struct entry {
   struct entry *next;
   void *data;
-  int flags;
 };
 typedef struct entry entry_t;
 
@@ -29,7 +28,6 @@ int trap_trigger(uint opcode, uint pc)
 {
   uint off = opcode & TRAP_MASK;
   void *data = traps[off].data;
-  int flags = traps[off].flags;
 
   /* unbound trap? */
   if(data == NULL) {
@@ -48,7 +46,6 @@ int trap_trigger(uint opcode, uint pc)
   info.pc = pc;
   info.offset = off;
   info.data = data;
-  info.flags = flags;
 
   /* end slice so we can call the trap directly after execute() */
   cpu_end_execute(CPU_END_TRAP);
@@ -69,11 +66,9 @@ void trap_init(void)
   first_free = &traps[0];
   for(i=0;i<(NUM_TRAPS-1);i++) {
     traps[i].next = &traps[i+1];
-    traps[i].flags = 0;
     traps[i].data = NULL;
   }
   traps[NUM_TRAPS-1].next = NULL;
-  traps[NUM_TRAPS-1].flags = 0;
   traps[NUM_TRAPS-1].data = NULL;
 
   /* setup my trap handler */
@@ -89,7 +84,7 @@ void *trap_get_data(int id)
   }
 }
 
-int trap_alloc(int flags, void *data)
+int trap_alloc(void *data)
 {
   int off;
 
@@ -105,7 +100,6 @@ int trap_alloc(int flags, void *data)
 
   /* store trap function */
   traps[off].data = data;
-  traps[off].flags = flags;
 
   return off;
 }
@@ -114,7 +108,6 @@ void trap_free(int id)
 {
   /* insert trap into free list */
   traps[id].next = first_free;
-  traps[id].flags = 0;
   traps[id].data = NULL;
   first_free = &traps[id];
 }

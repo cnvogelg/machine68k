@@ -99,25 +99,9 @@ def machine68k_bench_dummy_traps_benchmark(benchmark):
     c.cleanup()
 
 
-def machine68k_bench_dummy_traps_oldpc_benchmark(benchmark):
-    c = Context()
-    total = 10000
-
-    benchmark(setup_run(c, total, dummy_trap, old_pc=True))
-    c.cleanup()
-
-
 def machine68k_bench_fibo_traps_benchmark(benchmark):
     c = Context()
     total = 1000
 
     benchmark(setup_run(c, total, fibo_trap))
-    c.cleanup()
-
-
-def machine68k_bench_fibo_traps_oldpc_benchmark(benchmark):
-    c = Context()
-    total = 1000
-
-    benchmark(setup_run(c, total, fibo_trap, old_pc=True))
     c.cleanup()
