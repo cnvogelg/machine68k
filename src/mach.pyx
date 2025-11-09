@@ -23,13 +23,13 @@ cdef class MachineEndExecution:
 
 @dataclasses.dataclass
 cdef class MachineExecutionResult:
-  cdef readonly int cur_cycles
+  cdef readonly int cycles
   cdef readonly int sum_cycles
   cdef readonly MachineEndExecution result
 
 @dataclasses.dataclass
 cdef class MachineState:
-  cdef int cur_cycles
+  cdef int cycles
   cdef int sum_cycles
   cdef MachineEndExecution abort
 
@@ -81,7 +81,7 @@ cdef class Machine:
     cdef MachineState state
     if len(self.state_stack) > 0:
       state = self.state_stack[-1]
-      return MachineExecutionResult(state.cur_cycles, 
+      return MachineExecutionResult(state.cycles, 
                                     state.sum_cycles,
                                     state.abort)
     else:
@@ -127,7 +127,7 @@ cdef class Machine:
       
       # account cycles, so that code in a trap can query it
       # via get_current_cycles()
-      state.cur_cycles += run_cycles
+      state.cycles += run_cycles
       state.sum_cycles += run_cycles
       total_cycles += run_cycles
 
@@ -162,10 +162,10 @@ cdef class Machine:
     # adjust sum cycles of previous run
     if len(self.state_stack) > 0:
       last_state = self.state_stack[-1]
-      last_state.sum_cycles += state.cur_cycles
+      last_state.sum_cycles += state.cycles
 
     # now raise trap exception
     if exc:
       raise exc.with_traceback(trace_back)
 
-    return MachineExecutionResult(state.cur_cycles, state.sum_cycles, exit)
+    return MachineExecutionResult(state.cycles, state.sum_cycles, exit)

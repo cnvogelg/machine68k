@@ -90,7 +90,7 @@ def create_internal_run(ctx, total):
         assert res.result is ctx.end_obj
 
         assert ctx.count == total
-        assert res.cur_cycles == total * 4 + 20  # rts
+        assert res.cycles == total * 4 + 20  # rts
 
     return run
 

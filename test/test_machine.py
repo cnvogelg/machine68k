@@ -64,7 +64,7 @@ def machine68k_machine_execute_rts_test(ctx):
     ctx.mem.w16(ctx.code, op_rts)
     er = ctx.mach.execute(1000)
     assert er.result is ctx.end_obj
-    assert er.cur_cycles == 20
+    assert er.cycles == 20
     assert er.sum_cycles == 20
 
 
@@ -78,12 +78,12 @@ def machine68k_machine_execute_max_cycles_test(ctx):
     # run and return after cycles
     er = ctx.mach.execute(100)
     assert er.result is None
-    assert er.cur_cycles == 100
+    assert er.cycles == 100
     assert er.sum_cycles == 100
     # run too few
     er = ctx.mach.execute(2)
     assert er.result is None
-    assert er.cur_cycles == 4
+    assert er.cycles == 4
     assert er.sum_cycles == 4
 
 
@@ -94,11 +94,11 @@ def machine68k_machine_execute_max_cycles_test(ctx):
     # exact cycles
     er = ctx.mach.execute(40)
     assert er.result is None
-    assert er.cur_cycles == 48
+    assert er.cycles == 48
     assert er.sum_cycles == 48
     # too few
     er = ctx.mach.execute(10)
-    assert er.cur_cycles == 12
+    assert er.cycles == 12
     assert er.sum_cycles == 12
 
 
@@ -115,7 +115,7 @@ def machine68k_machine_pc_changed_func_test(ctx):
     gen_code(ctx, op_nop)
     er = ctx.mach.execute(2000)
     assert er.result is ctx.end_obj
-    assert er.cur_cycles == 60
+    assert er.cycles == 60
     assert er.sum_cycles == 60
     assert a == [ctx.code + 8, ctx.code + 6, ctx.end_addr]
 
@@ -193,7 +193,7 @@ def machine68k_machine_trap_simple_test(ctx):
         a.append(pc)
         # fetch the current state
         state = ctx.mach.get_state()
-        assert state.cur_cycles == 4
+        assert state.cycles == 4
         assert state.sum_cycles == 4
         assert state.result is None
 
@@ -204,7 +204,7 @@ def machine68k_machine_trap_simple_test(ctx):
     er = ctx.mach.execute(2000)
     assert a == [opc, ctx.code]
     assert er.result is ctx.end_obj
-    assert er.cur_cycles == 24
+    assert er.cycles == 24
     assert er.sum_cycles == 24
     ctx.traps.free(tid)
 
@@ -228,7 +228,7 @@ def machine68k_machine_trap_end_test(ctx):
     er = ctx.mach.execute(2000)
     assert a == [opc, ctx.code]
     assert er.result is my_end_obj
-    assert er.cur_cycles == 4
+    assert er.cycles == 4
     assert er.sum_cycles == 4
     ctx.traps.free(tid)
 
@@ -252,7 +252,7 @@ def machine68k_machine_trap_abort_test(ctx):
     assert a == [opc, ctx.code]
     # return special abort res object
     assert er.result is ctx.mach.get_abort_default()
-    assert er.cur_cycles == 4
+    assert er.cycles == 4
     assert er.sum_cycles == 4
     ctx.traps.free(tid)
 
@@ -278,7 +278,7 @@ def machine68k_machine_trap_abort_custom_test(ctx):
     assert a == [opc, ctx.code]
     # return my abort res object
     assert er.result is custom_abort
-    assert er.cur_cycles == 4
+    assert er.cycles == 4
     assert er.sum_cycles == 4
     ctx.traps.free(tid)
 
@@ -313,14 +313,14 @@ def machine68k_machine_recurse_test(ctx):
         # check current state
         state = ctx.mach.get_state()
         assert state.result is None
-        assert state.cur_cycles == 4
+        assert state.cycles == 4
         assert state.sum_cycles == 4
         # new pc
         pc = ctx.cpu.r_pc()
         ctx.cpu.w_pc(ctx.code + 10)
         # run new pc
         er = ctx.mach.execute(1000)
-        assert er.cur_cycles == 4
+        assert er.cycles == 4
         assert er.sum_cycles == 8
         assert er.result == ctx.end_obj
         # restore pc
@@ -328,7 +328,7 @@ def machine68k_machine_recurse_test(ctx):
         # check state again
         state = ctx.mach.get_state()
         assert state.result is None
-        assert state.cur_cycles == 4
+        assert state.cycles == 4
         assert state.sum_cycles == 8
 
     tid = ctx.traps.alloc(my_func)
@@ -346,7 +346,7 @@ def machine68k_machine_recurse_test(ctx):
 
     er = ctx.mach.execute(2000)
     assert er.result is ctx.end_obj
-    assert er.cur_cycles == 8
+    assert er.cycles == 8
     assert er.sum_cycles == 12
     assert instr == [ctx.code, ctx.code + 10, ctx.code + 2]
     ctx.traps.free(tid)
@@ -360,7 +360,7 @@ def machine68k_machine_recurse_two_trap_test(ctx):
         # check current state
         state = ctx.mach.get_state()
         assert state.result is None
-        assert state.cur_cycles == 4
+        assert state.cycles == 4
         assert state.sum_cycles == 4
         # set new pc
         pc = ctx.cpu.r_pc()
@@ -368,21 +368,21 @@ def machine68k_machine_recurse_two_trap_test(ctx):
         # second run
         er = ctx.mach.execute(1000)
         assert er.result is ctx.end_obj
-        assert er.cur_cycles == 8
+        assert er.cycles == 8
         assert er.sum_cycles == 12
         # restore pc
         ctx.cpu.w_pc(pc)
         # check current state
         state = ctx.mach.get_state()
         assert state.result is None
-        assert state.cur_cycles == 4
+        assert state.cycles == 4
         assert state.sum_cycles == 12
 
     def my_func2(opcode, pc):
         # check current state
         state = ctx.mach.get_state()
         assert state.result is None
-        assert state.cur_cycles == 4
+        assert state.cycles == 4
         assert state.sum_cycles == 8
         # store opcode and pc
         a.append(opcode)
@@ -408,7 +408,7 @@ def machine68k_machine_recurse_two_trap_test(ctx):
     ctx.cpu.set_instr_hook_callback(out)
 
     er = ctx.mach.execute(2000)
-    assert er.cur_cycles == 8
+    assert er.cycles == 8
     assert er.sum_cycles == 16
     assert er.result is ctx.end_obj
 
@@ -425,7 +425,7 @@ def machine68k_machine_recurse_two_trap_raise_test(ctx):
         # check current state
         state = ctx.mach.get_state()
         assert state.result is None
-        assert state.cur_cycles == 4
+        assert state.cycles == 4
         assert state.sum_cycles == 4
         # new pc
         ctx.cpu.w_pc(ctx.code + 10)
@@ -472,7 +472,7 @@ def machine68k_machine_recurse_two_trap_except_test(ctx):
         # check current state
         state = ctx.mach.get_state()
         assert state.result is None
-        assert state.cur_cycles == 4
+        assert state.cycles == 4
         assert state.sum_cycles == 4
         # new pc
         pc = ctx.cpu.r_pc()
@@ -485,7 +485,7 @@ def machine68k_machine_recurse_two_trap_except_test(ctx):
         # check current state
         state = ctx.mach.get_state()
         assert state.result is None
-        assert state.cur_cycles == 4
+        assert state.cycles == 4
         assert state.sum_cycles == 8  # sub trap
         assert ctx.mach.get_nesting_level() == 1
 
@@ -494,7 +494,7 @@ def machine68k_machine_recurse_two_trap_except_test(ctx):
         # check current state
         state = ctx.mach.get_state()
         assert state.result is None
-        assert state.cur_cycles == 4
+        assert state.cycles == 4
         assert state.sum_cycles == 8
         # now raise the error in the second run
         raise ValueError("foo")
@@ -522,7 +522,7 @@ def machine68k_machine_recurse_two_trap_except_test(ctx):
     er = ctx.mach.execute(2000)
     assert ctx.mach.get_nesting_level() == 0
     assert er.result is ctx.end_obj
-    assert er.cur_cycles == 8
+    assert er.cycles == 8
     assert er.sum_cycles == 12
 
     assert instr == [ctx.code, ctx.code + 10, ctx.code + 2]
