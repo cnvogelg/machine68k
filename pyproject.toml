@@ -10,7 +10,7 @@ authors = [
 description = "A Cython binding for a m68k system emulator"
 requires-python = ">=3.8"
 keywords = ["m68k", "musashi", "machine68k", "system emulator"]
-license = {text = "GPL-v2"}
+license = "GPL-2.0-or-later"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
