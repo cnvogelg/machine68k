@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.4.1][5] (2025-12-21)
+
+* fix for Python 3.12 and rpyc
+* added support for Python 3.13
+
 ## [0.4.0][4] (2025-12-20)
 
 * rewrote machine's execute
@@ -30,3 +35,4 @@
 [2]: https://github.com/cnvogelg/machine68k/tree/v0.2.0
 [3]: https://github.com/cnvogelg/machine68k/tree/v0.3.0
 [4]: https://github.com/cnvogelg/machine68k/tree/v0.4.0
+[5]: https://github.com/cnvogelg/machine68k/tree/v0.4.1
