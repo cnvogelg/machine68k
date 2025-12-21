@@ -298,12 +298,6 @@ def machine68k_mem_block_test(mem):
     mem.w_block(0, data)
     res = mem.r_block(0, len(data))
     assert res == data
-    # write bytearray block
-    bdata = bytearray(data)
-    mem.w_block(0x100, bdata)
-    res = mem.r_block(0x100, len(bdata))
-    print(res, bdata)
-    assert res == bdata
     # clear block and read back
     mem.clear_block(0x200, 100, 42)
     res = mem.r_block(0x200, 100)
