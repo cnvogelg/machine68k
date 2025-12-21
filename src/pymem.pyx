@@ -317,12 +317,11 @@ cdef class Memory:
     memcpy(ptr, ram, size)
     return res
 
-  def w_block(self,uint addr, object data):
-    cdef bytes bdata = bytes(data)
-    cdef uint size = len(bdata)
+  def w_block(self,uint addr, bytes data):
+    cdef uint size = len(data)
     if (addr+size) > self.ram_bytes:
       self._raise_ram_error(addr, 'W', size)
-    cdef const unsigned char *ptr = bdata
+    cdef const unsigned char *ptr = data
     cdef unsigned char *ram = self.ram_ptr + addr
     memcpy(ram, ptr, size)
 
