@@ -182,7 +182,7 @@ void m68ki_build_opcode_table(void)
 	}
 
 	ostruct = m68k_opcode_handler_table;
-	while(ostruct->mask != 0xff00)
+	while(ostruct->mask != 0xff00 && ostruct->mask != 0)
 	{
 		for(i = 0;i < 0x10000;i++)
 		{
