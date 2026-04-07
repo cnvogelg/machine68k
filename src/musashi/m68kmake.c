@@ -1141,12 +1141,19 @@ void populate_table(void)
 		}
 
 		/* generate mask and match from bitpattern */
-		op->op_mask = 0;
-		op->op_match = 0;
-		for(i=0;i<16;i++)
+		/* Use intermediate unsigned int variables to work around an MSVC
+		 * /O2 optimization bug where |= on unsigned short struct members
+		 * through a pointer drops bit 14 (0x4000). */
 		{
-			op->op_mask |= (bitpattern[i] != '.') << (15-i);
-			op->op_match |= (bitpattern[i] == '1') << (15-i);
+			unsigned int mask = 0;
+			unsigned int match = 0;
+			for(i=0;i<16;i++)
+			{
+				mask |= (bitpattern[i] != '.') << (15-i);
+				match |= (bitpattern[i] == '1') << (15-i);
+			}
+			op->op_mask = (unsigned short)mask;
+			op->op_match = (unsigned short)match;
 		}
 	}
 	/* Terminate the list */
