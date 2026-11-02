@@ -50,6 +50,7 @@ if not os.path.exists(ext_file) and not use_cython:
 gen_src = ["m68kopac.c", "m68kopdm.c", "m68kopnz.c", "m68kops.c"]
 
 gen_tool = "build/m68kmake"
+gen_tool_exe = os.path.join("build", "m68kmake.exe" if sys.platform == "win32" else "m68kmake")
 gen_tool_src = "src/musashi/m68kmake.c"
 gen_tool_obj = "build/src/musashi/m68kmake.o"
 gen_input = "src/musashi/m68k_in.c"
@@ -98,9 +99,9 @@ class GenCommand(Command):
             log.info("creating '{}' dir".format(build_dir))
             os.mkdir(build_dir)
         # build tool first?
-        if not os.path.exists(gen_tool):
+        if not os.path.exists(gen_tool_exe):
             cc = ccompiler.new_compiler()
-            log.info("building '{}' tool".format(gen_tool))
+            log.info("building '{}' tool".format(gen_tool_exe))
             # win fixes
             src = gen_tool_src.replace("/", os.path.sep)
             print("tool source:", src)
@@ -126,7 +127,7 @@ class GenCommand(Command):
         # generate source?
         if not os.path.exists(gen_src[0]):
             log.info("generating source files")
-            cmd = [gen_tool, gen_dir, gen_input]
+            cmd = [gen_tool_exe, gen_dir, gen_input]
             subprocess.check_call(cmd)
 
 
@@ -146,8 +147,8 @@ class CleanGenCommand(Command):
         if os.path.exists(gen_dir):
             remove_tree(gen_dir, dry_run=self.dry_run)
         # remove tool
-        if os.path.exists(gen_tool):
-            os.remove(gen_tool)
+        if os.path.exists(gen_tool_exe):
+            os.remove(gen_tool_exe)
 
 
 # my custom commands

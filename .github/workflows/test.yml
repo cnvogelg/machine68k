@@ -1,4 +1,4 @@
-name: amitools GH Test
+name: machine68k GH Test
 
 on:
   - push
