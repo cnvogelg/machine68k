@@ -474,10 +474,9 @@ static float64
 #ifdef FLOATX80
 
 /*----------------------------------------------------------------------------
-| Normalizes the subnormal extended double-precision floating-point value
-| represented by the denormalized significand `aSig'.  The normalized exponent
-| and significand are stored at the locations pointed to by `zExpPtr' and
-| `zSigPtr', respectively.
+| Normalizes a zero-exponent extended value represented by `aSig'.  On the
+| MC68881 exponent zero is the base exponent, so a set integer bit remains at
+| exponent zero; a clear integer bit normalizes to a negative exponent.
 *----------------------------------------------------------------------------*/
 
 static void
@@ -487,7 +486,7 @@ static void
 
 	shiftCount = countLeadingZeros64( aSig );
 	*zSigPtr = aSig<<shiftCount;
-	*zExpPtr = 1 - shiftCount;
+	*zExpPtr = - shiftCount;
 
 }
 
@@ -508,11 +507,10 @@ static void
 | number of bits as single or double precision, respectively.  Otherwise, the
 | result is rounded to the full precision of the extended double-precision
 | format.
-|     The input significand must be normalized or smaller.  If the input
-| significand is not normalized, `zExp' must be 0; in that case, the result
-| returned is a subnormal number, and it must not require rounding.  The
-| handling of underflow and overflow follows the IEC/IEEE Standard for Binary
-| Floating-Point Arithmetic.
+|     The input significand must be normalized or smaller.  An exponent of
+| zero can represent either a normalized value (with the integer bit set) or
+| a subnormal value (with it clear).  The handling of underflow and overflow
+| follows the MC68881 extended format.
 *----------------------------------------------------------------------------*/
 
 // roundAndPackFloatx80 is now also used in fyl2x.c
@@ -562,18 +560,17 @@ static void
 			) {
 			goto overflow;
 		}
-		if ( zExp <= 0 ) {
+		if ( zExp < 0 ) {
 			isTiny =
 					( float_detect_tininess == float_tininess_before_rounding )
 				|| ( zExp < 0 )
 				|| ( zSig0 <= zSig0 + roundIncrement );
-			shift64RightJamming( zSig0, 1 - zExp, &zSig0 );
+			shift64RightJamming( zSig0, -zExp, &zSig0 );
 			zExp = 0;
 			roundBits = zSig0 & roundMask;
 			if ( isTiny && roundBits ) float_raise( float_flag_underflow );
 			if ( roundBits ) float_exception_flags |= float_flag_inexact;
 			zSig0 += roundIncrement;
-			if ( (sbits64) zSig0 < 0 ) zExp = 1;
 			roundIncrement = roundMask + 1;
 			if ( roundNearestEven && ( roundBits<<1 == roundIncrement ) ) {
 				roundMask |= roundIncrement;
@@ -626,15 +623,15 @@ static void
 				) {
 				return packFloatx80( zSign, 0x7FFE, ~ roundMask );
 			}
-			return packFloatx80( zSign, 0x7FFF, LIT64( 0x8000000000000000 ) );
+			return packFloatx80( zSign, 0x7FFF, 0 );
 		}
-		if ( zExp <= 0 ) {
+		if ( zExp < 0 ) {
 			isTiny =
 					( float_detect_tininess == float_tininess_before_rounding )
 				|| ( zExp < 0 )
 				|| ! increment
 				|| ( zSig0 < LIT64( 0xFFFFFFFFFFFFFFFF ) );
-			shift64ExtraRightJamming( zSig0, zSig1, 1 - zExp, &zSig0, &zSig1 );
+			shift64ExtraRightJamming( zSig0, zSig1, -zExp, &zSig0, &zSig1 );
 			zExp = 0;
 			if ( isTiny && zSig1 ) float_raise( float_flag_underflow );
 			if ( zSig1 ) float_exception_flags |= float_flag_inexact;
@@ -653,7 +650,6 @@ static void
 				++zSig0;
 				zSig0 &=
 					~ ( ( (bits64) ( zSig1<<1 ) == 0 ) & roundNearestEven );
-				if ( (sbits64) zSig0 < 0 ) zExp = 1;
 			}
 			return packFloatx80( zSign, zExp, zSig0 );
 		}
@@ -1204,7 +1200,7 @@ floatx80 float32_to_floatx80( float32 a )
 	aSign = extractFloat32Sign( a );
 	if ( aExp == 0xFF ) {
 		if ( aSig ) return commonNaNToFloatx80( float32ToCommonNaN( a ) );
-		return packFloatx80( aSign, 0x7FFF, LIT64( 0x8000000000000000 ) );
+		return packFloatx80( aSign, 0x7FFF, 0 );
 	}
 	if ( aExp == 0 ) {
 		if ( aSig == 0 ) return packFloatx80( aSign, 0, 0 );
@@ -2130,7 +2126,7 @@ floatx80 float64_to_floatx80( float64 a )
 	aSign = extractFloat64Sign( a );
 	if ( aExp == 0x7FF ) {
 		if ( aSig ) return commonNaNToFloatx80( float64ToCommonNaN( a ) );
-		return packFloatx80( aSign, 0x7FFF, LIT64( 0x8000000000000000 ) );
+		return packFloatx80( aSign, 0x7FFF, 0 );
 	}
 	if ( aExp == 0 ) {
 		if ( aSig == 0 ) return packFloatx80( aSign, 0, 0 );
@@ -3163,22 +3159,24 @@ static floatx80 addFloatx80Sigs( floatx80 a, floatx80 b, flag zSign )
 	aExp = extractFloatx80Exp( a );
 	bSig = extractFloatx80Frac( b );
 	bExp = extractFloatx80Exp( b );
+	if ( aExp == 0 && aSig == 0 ) return b;
+	if ( bExp == 0 && bSig == 0 ) return a;
+	if ( aExp == 0 ) normalizeFloatx80Subnormal( aSig, &aExp, &aSig );
+	if ( bExp == 0 ) normalizeFloatx80Subnormal( bSig, &bExp, &bSig );
 	expDiff = aExp - bExp;
 	if ( 0 < expDiff ) {
 		if ( aExp == 0x7FFF ) {
 			if ( (bits64) ( aSig<<1 ) ) return propagateFloatx80NaN( a, b );
 			return a;
 		}
-		if ( bExp == 0 ) --expDiff;
 		shift64ExtraRightJamming( bSig, 0, expDiff, &bSig, &zSig1 );
 		zExp = aExp;
 	}
 	else if ( expDiff < 0 ) {
 		if ( bExp == 0x7FFF ) {
 			if ( (bits64) ( bSig<<1 ) ) return propagateFloatx80NaN( a, b );
-			return packFloatx80( zSign, 0x7FFF, LIT64( 0x8000000000000000 ) );
+			return packFloatx80( zSign, 0x7FFF, 0 );
 		}
-		if ( aExp == 0 ) ++expDiff;
 		shift64ExtraRightJamming( aSig, 0, - expDiff, &aSig, &zSig1 );
 		zExp = bExp;
 	}
@@ -3191,10 +3189,6 @@ static floatx80 addFloatx80Sigs( floatx80 a, floatx80 b, flag zSign )
 		}
 		zSig1 = 0;
 		zSig0 = aSig + bSig;
-		if ( aExp == 0 ) {
-			normalizeFloatx80Subnormal( zSig0, &zExp, &zSig0 );
-			goto roundAndPack;
-		}
 		zExp = aExp;
 		goto shiftRight1;
 	}
@@ -3230,6 +3224,19 @@ static floatx80 subFloatx80Sigs( floatx80 a, floatx80 b, flag zSign )
 	aExp = extractFloatx80Exp( a );
 	bSig = extractFloatx80Frac( b );
 	bExp = extractFloatx80Exp( b );
+	if ( aExp == 0 && aSig == 0 && bExp == 0 && bSig == 0 ) {
+		return packFloatx80( float_rounding_mode == float_round_down, 0, 0 );
+	}
+	if ( aExp == 0 && aSig == 0 ) {
+		b.high = ( b.high & 0x7FFF ) | ( (bits16) ( zSign ^ 1 ) << 15 );
+		return b;
+	}
+	if ( bExp == 0 && bSig == 0 ) {
+		a.high = ( a.high & 0x7FFF ) | ( (bits16) zSign << 15 );
+		return a;
+	}
+	if ( aExp == 0 ) normalizeFloatx80Subnormal( aSig, &aExp, &aSig );
+	if ( bExp == 0 ) normalizeFloatx80Subnormal( bSig, &bExp, &bSig );
 	expDiff = aExp - bExp;
 	if ( 0 < expDiff ) goto aExpBigger;
 	if ( expDiff < 0 ) goto bExpBigger;
@@ -3242,10 +3249,6 @@ static floatx80 subFloatx80Sigs( floatx80 a, floatx80 b, flag zSign )
 		z.high = floatx80_default_nan_high;
 		return z;
 	}
-	if ( aExp == 0 ) {
-		aExp = 1;
-		bExp = 1;
-	}
 	zSig1 = 0;
 	if ( bSig < aSig ) goto aBigger;
 	if ( aSig < bSig ) goto bBigger;
@@ -3253,9 +3256,8 @@ static floatx80 subFloatx80Sigs( floatx80 a, floatx80 b, flag zSign )
 	bExpBigger:
 	if ( bExp == 0x7FFF ) {
 		if ( (bits64) ( bSig<<1 ) ) return propagateFloatx80NaN( a, b );
-		return packFloatx80( zSign ^ 1, 0x7FFF, LIT64( 0x8000000000000000 ) );
+		return packFloatx80( zSign ^ 1, 0x7FFF, 0 );
 	}
-	if ( aExp == 0 ) ++expDiff;
 	shift128RightJamming( aSig, 0, - expDiff, &aSig, &zSig1 );
 	bBigger:
 	sub128( bSig, 0, aSig, zSig1, &zSig0, &zSig1 );
@@ -3267,7 +3269,6 @@ static floatx80 subFloatx80Sigs( floatx80 a, floatx80 b, flag zSign )
 		if ( (bits64) ( aSig<<1 ) ) return propagateFloatx80NaN( a, b );
 		return a;
 	}
-	if ( bExp == 0 ) --expDiff;
 	shift128RightJamming( bSig, 0, expDiff, &bSig, &zSig1 );
 	aBigger:
 	sub128( aSig, 0, bSig, zSig1, &zSig0, &zSig1 );
@@ -3347,7 +3348,7 @@ floatx80 floatx80_mul( floatx80 a, floatx80 b )
 			return propagateFloatx80NaN( a, b );
 		}
 		if ( ( bExp | bSig ) == 0 ) goto invalid;
-		return packFloatx80( zSign, 0x7FFF, LIT64( 0x8000000000000000 ) );
+		return packFloatx80( zSign, 0x7FFF, 0 );
 	}
 	if ( bExp == 0x7FFF ) {
 		if ( (bits64) ( bSig<<1 ) ) return propagateFloatx80NaN( a, b );
@@ -3358,7 +3359,7 @@ floatx80 floatx80_mul( floatx80 a, floatx80 b )
 			z.high = floatx80_default_nan_high;
 			return z;
 		}
-		return packFloatx80( zSign, 0x7FFF, LIT64( 0x8000000000000000 ) );
+		return packFloatx80( zSign, 0x7FFF, 0 );
 	}
 	if ( aExp == 0 ) {
 		if ( aSig == 0 ) return packFloatx80( zSign, 0, 0 );
@@ -3407,7 +3408,7 @@ floatx80 floatx80_div( floatx80 a, floatx80 b )
 			if ( (bits64) ( bSig<<1 ) ) return propagateFloatx80NaN( a, b );
 			goto invalid;
 		}
-		return packFloatx80( zSign, 0x7FFF, LIT64( 0x8000000000000000 ) );
+		return packFloatx80( zSign, 0x7FFF, 0 );
 	}
 	if ( bExp == 0x7FFF ) {
 		if ( (bits64) ( bSig<<1 ) ) return propagateFloatx80NaN( a, b );
@@ -3423,7 +3424,7 @@ floatx80 floatx80_div( floatx80 a, floatx80 b )
 				return z;
 			}
 			float_raise( float_flag_divbyzero );
-			return packFloatx80( zSign, 0x7FFF, LIT64( 0x8000000000000000 ) );
+			return packFloatx80( zSign, 0x7FFF, 0 );
 		}
 		normalizeFloatx80Subnormal( bSig, &bExp, &bSig );
 	}
@@ -4096,7 +4097,7 @@ floatx80 float128_to_floatx80( float128 a )
 		if ( aSig0 | aSig1 ) {
 			return commonNaNToFloatx80( float128ToCommonNaN( a ) );
 		}
-		return packFloatx80( aSign, 0x7FFF, LIT64( 0x8000000000000000 ) );
+		return packFloatx80( aSign, 0x7FFF, 0 );
 	}
 	if ( aExp == 0 ) {
 		if ( ( aSig0 | aSig1 ) == 0 ) return packFloatx80( aSign, 0, 0 );
