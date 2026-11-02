@@ -50,7 +50,9 @@ if not os.path.exists(ext_file) and not use_cython:
 gen_src = ["m68kopac.c", "m68kopdm.c", "m68kopnz.c", "m68kops.c"]
 
 gen_tool = "build/m68kmake"
-gen_tool_exe = os.path.join("build", "m68kmake.exe" if sys.platform == "win32" else "m68kmake")
+gen_tool_exe = os.path.join(
+    "build", "m68kmake.exe" if sys.platform == "win32" else "m68kmake"
+)
 gen_tool_src = "src/musashi/m68kmake.c"
 gen_tool_obj = "build/src/musashi/m68kmake.o"
 gen_input = "src/musashi/m68k_in.c"
