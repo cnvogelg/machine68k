@@ -1,5 +1,5 @@
 import pytest
-from machine68k import Memory, MemoryError, Machine, CPUType
+from machine68k import CPUType, Machine, Memory, MemoryError
 
 
 @pytest.fixture(params=["mem", "local", "remote"])
@@ -166,7 +166,7 @@ def machine68k_mem_rws_test(mem):
         mem.reads(0, 0x10000)
 
 
-class InvalidMemAccess(object):
+class InvalidMemAccess:
     def __init__(self, mem, mode, width, addr):
         self.mem = mem
         self.want = (mode, width, addr)
@@ -326,7 +326,7 @@ def machine68k_mem_bstr_test(mem):
     assert mem.r_bstr(100) == empty
 
 
-class TraceAssert(object):
+class TraceAssert:
     def __init__(self, mem, mode, width, addr, value):
         self.mem = mem
         self.want = (mode, width, addr, value)

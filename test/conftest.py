@@ -2,14 +2,14 @@ import socket
 import threading
 import time
 
-import pytest
 import machine68k
+import pytest
 
 
 def get_free_port():
     s = socket.socket()
     s.bind(("", 0))
-    addr, port = s.getsockname()
+    _addr, port = s.getsockname()
     s.close()
     return port
 

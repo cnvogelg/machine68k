@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: help setup remove build test format fix check sdist bdist upload clean clean-all
+.PHONY: help setup remove build test format fix fix-unsafe check sdist bdist upload clean clean-all
 .PHONY: html clean-html
 
 help:
@@ -10,6 +10,7 @@ help:
 	@echo "test      run pytest suite"
 	@echo "format    format source code"
 	@echo "fix       apply Ruff lint fixes"
+	@echo "fix-unsafe apply Ruff lint fixes, including unsafe fixes"
 	@echo "check     check formatting and lint"
 	@echo "sdist     build source dist"
 	@echo "bdist     build binary dist"
@@ -41,6 +42,9 @@ format:
 fix:
 	$(UV) run ruff check --fix .
 
+fix-unsafe:
+	$(UV) run ruff check --fix --unsafe-fixes .
+
 check:
 	$(UV) run ruff format --check .
 	$(UV) run ruff check .
@@ -55,7 +59,7 @@ upload: sdist
 	$(UV) publish dist/*
 
 html:
-	$(UV) run cython src/mach.pyx -a
+	$(UV) run cython --module-name machine68k src/mach.pyx -a
 
 clean:
 	$(UV) run --with setuptools --with packaging --with cython python setup.py clean

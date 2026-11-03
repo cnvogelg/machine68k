@@ -1,5 +1,5 @@
 import pytest
-from machine68k import Machine, Traps, CPUType
+from machine68k import CPUType, Machine, Traps
 
 
 @pytest.fixture(params=["traps", "local", "remote"])
@@ -48,8 +48,6 @@ def machine68k_traps_trigger_test(traps):
 
 
 def machine68k_traps_raise_test(traps):
-    a = []
-    b = []
 
     def my_func(opcode, pc):
         raise ValueError("bla")
@@ -72,8 +70,6 @@ def machine68k_traps_raise_test(traps):
 
 
 def machine68k_traps_return_test(traps):
-    a = []
-    b = []
 
     class Mine:
         pass

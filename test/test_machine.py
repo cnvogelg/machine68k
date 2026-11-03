@@ -1,6 +1,6 @@
 import pytest
-from machine68k import Machine, CPUType
-from opcodes import op_reset, op_jsr, op_rts, op_jmp, op_nop
+from machine68k import CPUType, Machine
+from opcodes import op_jmp, op_jsr, op_nop, op_reset, op_rts
 
 
 class Context:
@@ -87,7 +87,7 @@ def machine68k_machine_execute_max_cycles_test(ctx):
     assert er.sum_cycles == 4
 
 
-def machine68k_machine_execute_max_cycles_test(ctx):
+def machine68k_machine_execute_max_cycles_loop_test(ctx):
     # endless loop
     ctx.mem.w16(ctx.code, op_jmp)
     ctx.mem.w32(ctx.code + 2, ctx.code)

@@ -1,6 +1,6 @@
 import pytest
-from machine68k import Machine, CPUType
-from opcodes import op_reset, op_jsr, op_rts, op_jmp
+from machine68k import CPUType, Machine
+from opcodes import op_jsr, op_rts
 
 greenlet = pytest.importorskip("greenlet")
 
@@ -63,7 +63,6 @@ def machine68k_switch_run_test():
     def run1():
         cpu.w_pc(code)
         cpu.w_sp(0x700)
-        global ended
         while not ended:
             er = cpu.execute(2000)
             if er.was_trap:
@@ -75,7 +74,6 @@ def machine68k_switch_run_test():
     def run2():
         cpu.w_pc(code + 20)
         cpu.w_sp(0x600)
-        global ended
         while not ended:
             er = cpu.execute(2000)
             if er.was_trap:

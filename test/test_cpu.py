@@ -1,9 +1,9 @@
 import pytest
 from machine68k import (
-    Machine,
     CPU,
-    Register,
     CPUType,
+    Machine,
+    Register,
     cpu_type_from_str,
     cpu_type_to_str,
 )
@@ -37,7 +37,7 @@ def machine68k_cpu_type_test():
     assert cpu_type_to_str("bla") is None
 
 
-def machine68k_cpu_type_test(cpu_type):
+def machine68k_cpu_type_fixture_test(cpu_type):
     cpu = CPU(cpu_type)
     assert cpu.get_cpu_type() == cpu_type
     cpu_name = cpu_type_to_str(cpu_type)

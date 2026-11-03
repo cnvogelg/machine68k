@@ -101,4 +101,5 @@ uv pip install -e .
 
 The Makefile targets use `uv` to run the tools. For example, run `make test` to
 run the tests, `make format` to format Python files, `make fix` to apply Ruff
-lint fixes, and `make check` to check formatting and lint.
+lint fixes, `make fix-unsafe` to also apply unsafe Ruff fixes (which may change
+code behavior), and `make check` to check formatting and lint.

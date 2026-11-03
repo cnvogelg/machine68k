@@ -1,15 +1,14 @@
 import os
-import sys
 import subprocess
-
-from setuptools import setup, Extension
-from packaging import version
+import sys
+from distutils import ccompiler, log
 from distutils.command.build_ext import build_ext
 from distutils.command.clean import clean
 from distutils.core import Command
-from distutils import ccompiler
 from distutils.dir_util import remove_tree
-from distutils import log
+
+from packaging import version
+from setuptools import Extension, setup
 
 # has cython?
 try:
@@ -57,7 +56,7 @@ gen_tool_src = "src/musashi/m68kmake.c"
 gen_tool_obj = "build/src/musashi/m68kmake.o"
 gen_input = "src/musashi/m68k_in.c"
 gen_dir = "gen"
-gen_src = list([os.path.join(gen_dir, x) for x in gen_src])
+gen_src = [os.path.join(gen_dir, x) for x in gen_src]
 build_dir = "build"
 
 # check compiler
@@ -95,15 +94,15 @@ class GenCommand(Command):
     def run(self):
         # ensure dir exists
         if not os.path.isdir(gen_dir):
-            log.info("creating '{}' dir".format(gen_dir))
+            log.info(f"creating '{gen_dir}' dir")
             os.mkdir(gen_dir)
         if not os.path.isdir(build_dir):
-            log.info("creating '{}' dir".format(build_dir))
+            log.info(f"creating '{build_dir}' dir")
             os.mkdir(build_dir)
         # build tool first?
         if not os.path.exists(gen_tool_exe):
             cc = ccompiler.new_compiler()
-            log.info("building '{}' tool".format(gen_tool_exe))
+            log.info(f"building '{gen_tool_exe}' tool")
             # win fixes
             src = gen_tool_src.replace("/", os.path.sep)
             print("tool source:", src)
