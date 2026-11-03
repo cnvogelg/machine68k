@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.5.0][6] (2026-11-03)
+
+* added support for Python 3.14 and 3.15
+* fixed MC68881 extended arithmetic for exponent-zero values (#10)
+* fixed Windows opcode table over-read and JMP/CAS opcode collision (#12, #13)
+* fixed Windows build tool executable path (#11)
+* updated build-system requirements for current package metadata (#14)
+* renamed the GitHub Actions test workflow (#15)
+* contributors: Thomas Dye (#11, #12, #13) and Stefan Reinauer (#14, #15)
+
 ## [0.4.1][5] (2025-12-21)
 
 * fix for Python 3.12 and rpyc
@@ -36,3 +46,4 @@
 [3]: https://github.com/cnvogelg/machine68k/tree/v0.3.0
 [4]: https://github.com/cnvogelg/machine68k/tree/v0.4.0
 [5]: https://github.com/cnvogelg/machine68k/tree/v0.4.1
+[6]: https://github.com/cnvogelg/machine68k/tree/v0.5.0
