@@ -1,8 +1,7 @@
 cython
 sphinx
-twine
 tox
-black
+ruff
 build
 pytest
 pytest-benchmark

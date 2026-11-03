@@ -1,15 +1,16 @@
-PYTHON ?= python3
-PIP ?= pip3
+UV ?= uv
 
-.PHONY: help setup remove build test format sdist bdist upload clean clean-all
+.PHONY: help setup remove build test format fix check sdist bdist upload clean clean-all
 .PHONY: html clean-html
 
 help:
 	@echo "init      install dev packages"
-	@echo "setup     local pip install of package"
-	@echo "remove    uninstall pip install"
+	@echo "setup     local uv install of package"
+	@echo "remove    uninstall uv install"
 	@echo "test      run pytest suite"
 	@echo "format    format source code"
+	@echo "fix       apply Ruff lint fixes"
+	@echo "check     check formatting and lint"
 	@echo "sdist     build source dist"
 	@echo "bdist     build binary dist"
 	@echo "upload    dist to pypi"
@@ -19,37 +20,45 @@ help:
 	@echo "clean-html clean html files"
 
 init:
-	$(PIP) install --upgrade -r requirements-dev.txt
+	$(UV) python install "$$(cat .python-version)"
+	$(UV) pip install --upgrade -r requirements-dev.txt
 
 setup:
-	pip install -e .
+	$(UV) pip install -e .
 
 remove:
-	pip uninstall machine68k
+	$(UV) pip uninstall machine68k
 
 build:
-	python setup.py build
+	$(UV) run --with setuptools --with packaging --with cython python setup.py build
 
 test:
-	pytest test
+	$(UV) run pytest test
 
 format:
-	black .
+	$(UV) run ruff format .
+
+fix:
+	$(UV) run ruff check --fix .
+
+check:
+	$(UV) run ruff format --check .
+	$(UV) run ruff check .
 
 sdist:
-	$(PYTHON) -m build -s
+	$(UV) build --sdist
 
 bdist:
-	$(PYTHON) -m build -w
+	$(UV) build --wheel
 
 upload: sdist
-	twine upload dist/*
+	$(UV) publish dist/*
 
 html:
-	cython src/mach.pyx -a
+	$(UV) run cython src/mach.pyx -a
 
 clean:
-	$(PYTHON) setup.py clean
+	$(UV) run --with setuptools --with packaging --with cython python setup.py clean
 
 clean-all:
 	rm -rf build/ dist/

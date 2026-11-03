@@ -86,3 +86,19 @@ pip3 install -U -e .
 This install `machine68k` in your current Python environment but takes the
 source files still from this repository. So you can change the code there
 and directly test the machine.
+
+#### Using uv
+
+As an alternative, install [uv](https://docs.astral.sh/uv/getting-started/installation/),
+then create an environment and install the development dependencies and package:
+
+```bash
+uv python install "$(cat .python-version)"
+uv venv
+uv pip install -r requirements-dev.txt
+uv pip install -e .
+```
+
+The Makefile targets use `uv` to run the tools. For example, run `make test` to
+run the tests, `make format` to format Python files, `make fix` to apply Ruff
+lint fixes, and `make check` to check formatting and lint.
