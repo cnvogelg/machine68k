@@ -14,7 +14,7 @@ supplies the CPU emulation for `vamos`.
 
 ## Prerequisites
 
-- Python >= ```3.8```
+- Python >= ```3.11```
 - [pip3][3]
 
 ## Optional Packages
