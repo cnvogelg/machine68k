@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: help setup remove build test format fix fix-unsafe check sdist bdist upload clean clean-all
+.PHONY: help setup remove build test tox format fix fix-unsafe check sdist bdist upload clean clean-all
 .PHONY: html clean-html
 
 help:
@@ -8,6 +8,7 @@ help:
 	@echo "setup     local uv install of package"
 	@echo "remove    uninstall uv install"
 	@echo "test      run pytest suite"
+	@echo "tox       run tox test environments"
 	@echo "format    format source code"
 	@echo "fix       apply Ruff lint fixes"
 	@echo "fix-unsafe apply Ruff lint fixes, including unsafe fixes"
@@ -35,6 +36,10 @@ build:
 
 test:
 	$(UV) run pytest test
+
+tox:
+	$(UV) python install 3.11 3.12 3.13 3.14 3.15
+	$(UV) run --with tox tox
 
 format:
 	$(UV) run ruff format .
