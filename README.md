@@ -87,6 +87,25 @@ This install `machine68k` in your current Python environment but takes the
 source files still from this repository. So you can change the code there
 and directly test the machine.
 
+#### Building release wheels
+
+The `Build and publish wheels` workflow builds a source distribution, then
+builds wheels from that archive for CPython 3.11–3.15 on Linux x86_64,
+Windows x64, and macOS Intel and Apple Silicon. Each wheel is installed
+and tested on its native architecture, including the greenlet tests.
+Pull requests and manual runs produce downloadable artifacts without
+publishing them.
+
+For a release, configure a PyPI trusted publisher for `cnvogelg/machine68k`,
+workflow `wheels.yml`, and environment `pypi`. Create that environment in
+GitHub and configure any desired release approval rules. Pushing a `v*`
+release tag to the upstream repository publishes the source distribution
+and wheels only after all wheel tests pass. No PyPI token is required.
+
+Releases made with this workflow let pip install a matching wheel without
+a compiler. Older source-only releases and platforms without a matching
+wheel still require a host C compiler.
+
 #### Using uv
 
 As an alternative, install [uv](https://docs.astral.sh/uv/getting-started/installation/),
