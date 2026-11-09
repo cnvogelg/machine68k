@@ -74,7 +74,7 @@ jobs:
           path: wheelhouse/*.whl
           if-no-files-found: error
 
-  publish:
+  publish-to-pypi:
     name: Publish to PyPI
     if: >-
       github.repository == 'cnvogelg/machine68k' &&
@@ -84,6 +84,31 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/machine68k
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: sdist
+          path: dist
+      - uses: actions/download-artifact@v6
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-to-testpypi:
+    name: Publish to TestPyPI
+    if: >-
+      github.repository == 'cnvogelg/machine68k' &&
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    needs: [sdist, wheels]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/machine68k
     permissions:
       id-token: write
     steps:
