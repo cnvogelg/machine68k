@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.5.1][7] (2026-11-09)
+
+* automated release build and publication of tested wheels for CPython 3.11-3.15 across supported platforms (#16)
+* contributors: Stefan Reinauer (#16)
+
 ## [0.5.0][6] (2026-11-03)
 
 * added support for Python 3.14 and 3.15
@@ -47,3 +52,4 @@
 [4]: https://github.com/cnvogelg/machine68k/tree/v0.4.0
 [5]: https://github.com/cnvogelg/machine68k/tree/v0.4.1
 [6]: https://github.com/cnvogelg/machine68k/tree/v0.5.0
+[7]: https://github.com/cnvogelg/machine68k/tree/v0.5.1
