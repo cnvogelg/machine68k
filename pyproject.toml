@@ -31,3 +31,4 @@ include-package-data = true
 readme = { file="README.md", content-type="text/markdown" }
 
 [tool.setuptools_scm]
+local_scheme = "no-local-version"
