@@ -10,10 +10,10 @@
 
 #include "mem.h"
 
-/* THOR: I need a *little* more memory than 16MB.
-** This gives 256MB max.
-*/
-#define NUM_PAGES   4096
+/* Dispatch every 64 KiB page in the 32-bit address space. */
+#define NUM_PAGES   65536
+/* Preserve the existing special-range allocation window below 256 MiB. */
+#define SPECIAL_TOP_PAGE 4096
 
 /* ----- Data ----- */
 static uint8_t *ram_data;
@@ -31,7 +31,7 @@ static void *invalid_ctx;
 static int mem_trace = 0;
 static trace_func_t trace_func;
 static void *trace_ctx;
-static uint special_page = NUM_PAGES;
+static uint special_page = SPECIAL_TOP_PAGE;
 
 /* ----- RAW Access ----- */
 extern uint8_t *mem_raw_ptr(void)
@@ -270,6 +270,7 @@ int mem_init(uint ram_size_kib, uint8_t *own_ram)
     }
   }
 
+  special_page = SPECIAL_TOP_PAGE;
   mem_trace = 0;
   trace_func = default_trace;
   invalid_func = default_invalid;

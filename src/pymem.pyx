@@ -74,6 +74,9 @@ cdef class Memory:
   def __repr__(self):
     return f"Memory(ram_size_kib={self.ram_size_kib})"
 
+  def get_address_bits(self):
+    return 32
+
   def get_ram_size_kib(self):
     return self.ram_size_kib
 
