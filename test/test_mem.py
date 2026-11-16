@@ -400,3 +400,28 @@ def machine68k_mem_special_rw_error_test(mem):
         mem.cpu_r8(0xBF0000)
     with pytest.raises(ValueError):
         mem.cpu_w8(0xBF0000, 42)
+
+
+@pytest.mark.parametrize("address", [0x10F8000C, 0xFFFF0000])
+@pytest.mark.parametrize("bits", [8, 16, 32])
+def machine68k_mem_full_address_space_test(mem, address, bits):
+    assert mem.get_address_bits() == 32
+    value = (1 << bits) - 1
+    seen = []
+    width = {8: 0, 16: 1, 32: 2}[bits]
+    mem.set_special_range_read_func(address & ~0xFFFF, width, lambda addr: value)
+    mem.set_special_range_write_func(
+        address & ~0xFFFF, width, lambda addr, data: seen.append((addr, data))
+    )
+    assert getattr(mem, "cpu_r%d" % bits)(address) == value
+    getattr(mem, "cpu_w%d" % bits)(address, value)
+    assert seen == [(address, value)]
+
+
+def machine68k_mem_special_range_window_test():
+    first = Memory(16)
+    assert first.reserve_special_range() == 0x0FFF0000
+    assert first.reserve_special_range() == 0x0FFE0000
+    del first
+    second = Memory(16)
+    assert second.reserve_special_range() == 0x0FFF0000
