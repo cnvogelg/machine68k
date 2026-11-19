@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.5.2][8] (2026-11-19)
+
+* memory: dispatch callbacks across the full 32-bit address space and expose `get_address_bits()` (#17)
+* added GitHub action for releases
+* fixed local version for TestPyPI uploads and published main builds to TestPyPI
+* contributors: Stefan Reinauer (#17)
+
 ## [0.5.1][7] (2026-11-09)
 
 * automated release build and publication of tested wheels for CPython 3.11-3.15 across supported platforms (#16)
@@ -53,3 +60,4 @@
 [5]: https://github.com/cnvogelg/machine68k/tree/v0.4.1
 [6]: https://github.com/cnvogelg/machine68k/tree/v0.5.0
 [7]: https://github.com/cnvogelg/machine68k/tree/v0.5.1
+[8]: https://github.com/cnvogelg/machine68k/tree/v0.5.2
